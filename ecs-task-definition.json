@@ -1,0 +1,77 @@
+{
+  "family": "event-site-manager-batch-jobs",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "batch-jobs-container",
+      "image": "YOUR_ECR_REPOSITORY_URI:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8081,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        },
+        {
+          "name": "SERVER_PORT",
+          "value": "8081"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "RDS_ENDPOINT",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/rds-endpoint"
+        },
+        {
+          "name": "DB_NAME",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/db-name"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/db-username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/db-password"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/aws-access-key-id"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:batch-jobs/aws-secret-access-key"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/event-site-manager-batch-jobs",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "wget --no-verbose --tries=1 --spider http://localhost:8081/batch-jobs/actuator/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
+

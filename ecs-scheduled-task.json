@@ -1,0 +1,30 @@
+{
+  "Name": "subscription-renewal-scheduled-task",
+  "ScheduleExpression": "cron(0 */6 * * ? *)",
+  "State": "ENABLED",
+  "Description": "Runs subscription renewal batch job every 6 hours",
+  "Target": {
+    "Arn": "arn:aws:ecs:REGION:ACCOUNT_ID:cluster/YOUR_CLUSTER_NAME",
+    "RoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsEventsRole",
+    "EcsParameters": {
+      "TaskDefinitionArn": "arn:aws:ecs:REGION:ACCOUNT_ID:task-definition/event-site-manager-batch-jobs",
+      "LaunchType": "FARGATE",
+      "NetworkConfiguration": {
+        "awsvpcConfiguration": {
+          "Subnets": [
+            "subnet-xxxxxxxxx",
+            "subnet-yyyyyyyyy"
+          ],
+          "SecurityGroups": [
+            "sg-xxxxxxxxx"
+          ],
+          "AssignPublicIp": "ENABLED"
+        }
+      },
+      "PlatformVersion": "LATEST"
+    },
+    "Input": "{\"containerOverrides\":[{\"name\":\"batch-jobs-container\",\"environment\":[{\"name\":\"BATCH_JOB_TYPE\",\"value\":\"SUBSCRIPTION_RENEWAL\"}]}]}"
+  }
+}
+
+

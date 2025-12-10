@@ -1,0 +1,94 @@
+spring:
+  application:
+    name: event-site-manager-batch-jobs
+
+  datasource:
+    url: jdbc:postgresql://${RDS_ENDPOINT:localhost}:5432/${DB_NAME:event_site_manager_db}
+    username: ${DB_USERNAME:event_site_app}
+    password: ${DB_PASSWORD:event_site_app!}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # Use 'update' for development, 'validate' for production after tables are created
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+  batch:
+    job:
+      enabled: false  # Jobs are triggered via REST API or scheduled tasks
+    jdbc:
+      initialize-schema: always
+      table-prefix: BATCH_
+
+server:
+  port: ${SERVER_PORT:8081}  # Default to 8081 to avoid conflict with backend on 8080
+  servlet:
+    context-path: /batch-jobs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# AWS Configuration
+aws:
+  s3:
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    region: ${AWS_REGION:us-east-1}
+  ses:
+    rate-limit-per-second: ${AWS_SES_RATE_LIMIT_PER_SECOND:200}
+    from-email: ${AWS_SES_FROM_EMAIL:noreply@example.com}
+
+# Stripe Configuration (tenant-specific, loaded from database)
+stripe:
+  default-api-key: ${STRIPE_DEFAULT_API_KEY:}
+
+# Batch Job Configuration
+batch:
+  subscription-renewal:
+    enabled: ${SUBSCRIPTION_RENEWAL_ENABLED:true}
+    schedule-cron: ${SUBSCRIPTION_RENEWAL_CRON:0 0 */6 * * *}  # Every 6 hours
+    batch-size: ${SUBSCRIPTION_RENEWAL_BATCH_SIZE:100}
+    max-subscriptions: ${SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS:10000}
+    days-before-renewal: ${SUBSCRIPTION_RENEWAL_DAYS_BEFORE:7}
+
+  email:
+    enabled: ${EMAIL_BATCH_ENABLED:true}
+    schedule-cron: ${EMAIL_BATCH_CRON:0 0 2 * * *}  # Daily at 2 AM
+    batch-size: ${EMAIL_BATCH_SIZE:50}
+    max-emails: ${EMAIL_BATCH_MAX_EMAILS:10000}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.eventmanager.batch: DEBUG
+    org.springframework.batch: INFO
+    org.springframework.jdbc: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
