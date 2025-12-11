@@ -52,12 +52,17 @@ public class BatchJobController {
     @PostMapping("/email")
     public ResponseEntity<BatchJobResponse> triggerEmailBatch(@RequestBody BatchJobRequest request) {
         try {
-            log.info("Received request to trigger email batch job for tenant: {}", request.getTenantId());
+            log.info("Received request to trigger email batch job for tenant: {}, templateId: {}",
+                request.getTenantId(), request.getTemplateId());
 
             BatchJobResponse response = batchJobOrchestrationService.runEmailBatchJob(
                 request.getTenantId(),
                 request.getBatchSize(),
-                request.getMaxEmails()
+                request.getMaxEmails(),
+                request.getTemplateId(),
+                request.getRecipientEmails(),
+                request.getUserId(),
+                request.getRecipientType()
             );
 
             return ResponseEntity.ok(response);
@@ -79,5 +84,7 @@ public class BatchJobController {
         return ResponseEntity.ok("Batch Jobs Service is running");
     }
 }
+
+
 
 

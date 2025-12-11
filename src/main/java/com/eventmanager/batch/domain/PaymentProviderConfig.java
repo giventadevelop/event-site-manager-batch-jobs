@@ -22,11 +22,13 @@ public class PaymentProviderConfig implements Serializable {
     @Column(name = "tenant_id", nullable = false, length = 255)
     private String tenantId;
 
-    @Column(name = "provider", nullable = false, length = 50)
-    private String provider; // e.g., "STRIPE"
+    @Column(name = "provider_name", nullable = false, length = 50)
+    private String provider; // e.g., "STRIPE" - mapped to provider_name column
 
     @Column(name = "config_json", columnDefinition = "jsonb")
     private String configJson; // JSON containing API keys and other config
 }
+
+
 
 

@@ -8,9 +8,10 @@ import java.time.ZonedDateTime;
 /**
  * Entity for tracking batch job executions.
  * Stores metadata about batch job runs for monitoring and auditing.
+ * This is a custom application table, separate from Spring Batch's BATCH_JOB_EXECUTION table.
  */
 @Entity
-@Table(name = "batch_job_execution")
+@Table(name = "batch_job_execution_log")
 @Data
 public class BatchJobExecution implements Serializable {
 

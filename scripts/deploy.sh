@@ -76,3 +76,5 @@ echo -e "${YELLOW}To update ECS task definition, run:${NC}"
 echo "aws ecs register-task-definition --cli-input-json file://ecs-task-definition.json"
 
 
+
+

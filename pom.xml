@@ -87,6 +87,13 @@
             <version>${aws-sdk-ses.version}</version>
         </dependency>
 
+        <!-- AWS SDK for S3 -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws-sdk-ses.version}</version>
+        </dependency>
+
         <!-- Resilience4j for Circuit Breaker -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>

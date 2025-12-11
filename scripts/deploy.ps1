@@ -72,3 +72,5 @@ Write-Host "To update ECS task definition, run:" -ForegroundColor Yellow
 Write-Host "aws ecs register-task-definition --cli-input-json file://ecs-task-definition.json"
 
 
+
+

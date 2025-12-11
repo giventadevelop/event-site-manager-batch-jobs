@@ -31,7 +31,7 @@ spring:
     job:
       enabled: false  # Jobs are triggered via REST API or scheduled tasks
     jdbc:
-      initialize-schema: always
+      initialize-schema: never  # Set to 'never' since we're manually creating tables with BIGSERIAL
       table-prefix: BATCH_
 
 server:
@@ -58,6 +58,7 @@ aws:
     access-key: ${AWS_ACCESS_KEY_ID:}
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
     region: ${AWS_REGION:us-east-1}
+    bucket-name: ${AWS_S3_BUCKET_NAME:}
   ses:
     rate-limit-per-second: ${AWS_SES_RATE_LIMIT_PER_SECOND:200}
     from-email: ${AWS_SES_FROM_EMAIL:noreply@example.com}

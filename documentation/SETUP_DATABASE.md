@@ -119,3 +119,4 @@ This table should exist from your main backend application. If it doesn't, you n
 This table should exist from your main backend application. Ensure your backend database migrations have been run.
 
 
+
