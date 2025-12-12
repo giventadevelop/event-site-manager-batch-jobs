@@ -16,8 +16,17 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
+# Create non-root user and temp directory with proper permissions
+RUN addgroup -S spring && adduser -S spring -G spring && \
+    mkdir -p /tmp/spring-boot-tomcat && \
+    chown -R spring:spring /tmp/spring-boot-tomcat && \
+    chown -R spring:spring /app
+
+# Set temp directory environment variable (machine-agnostic)
+ENV JAVA_TMPDIR=/tmp/spring-boot-tomcat
+ENV TMPDIR=/tmp/spring-boot-tomcat
+
+# Switch to non-root user
 USER spring:spring
 
 # Copy built JAR from build stage
@@ -30,8 +39,9 @@ EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8081/batch-jobs/actuator/health || exit 1
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the application with temp directory set via JVM argument
+# This ensures machine-agnostic temp directory handling
+ENTRYPOINT ["sh", "-c", "java -Djava.io.tmpdir=${JAVA_TMPDIR} -jar app.jar"]
 
 
 

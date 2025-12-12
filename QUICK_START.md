@@ -85,7 +85,7 @@ psql -d event_manager -f database/migrations/add_batch_job_columns.sql
 export RDS_ENDPOINT=localhost
 export DB_NAME=event_site_manager_db
 export DB_USERNAME=event_site_app
-export DB_PASSWORD=event_site_app!
+export DB_PASSWORD=your-database-password
 export DB_MAX_POOL_SIZE=10
 export DB_MIN_IDLE=2
 export AWS_ACCESS_KEY_ID=your-key
@@ -216,7 +216,7 @@ LIMIT 10;
 | `RDS_ENDPOINT` | PostgreSQL host/endpoint | `localhost` |
 | `DB_NAME` | Database name | `event_site_manager_db` |
 | `DB_USERNAME` | Database username | `event_site_app` |
-| `DB_PASSWORD` | Database password | `event_site_app!` |
+| `DB_PASSWORD` | Database password | `your-database-password` |
 | `DB_MAX_POOL_SIZE` | Maximum connection pool size | `10` |
 | `DB_MIN_IDLE` | Minimum idle connections | `2` |
 | `AWS_ACCESS_KEY_ID` | AWS access key | - |

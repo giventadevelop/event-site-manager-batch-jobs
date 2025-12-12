@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  batch-jobs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: event-site-manager-batch-jobs
+    ports:
+      - "${SERVER_PORT:-8081}:8081"
+    environment:
+      # Server Configuration
+      - SERVER_PORT=${SERVER_PORT:-8081}
+      
+      # Database Configuration
+      # Use PostgreSQL container name when both containers are on the same network
+      # Use 'host.docker.internal' to connect to PostgreSQL running on host
+      # Use 'localhost' when running the app locally (not in Docker)
+      - RDS_ENDPOINT=${RDS_ENDPOINT:-event_site_manager_db-postgresql-1}
+      - DB_NAME=${DB_NAME:-event_site_manager_db}
+      - DB_USERNAME=${DB_USERNAME:-event_site_app}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_MAX_POOL_SIZE=${DB_MAX_POOL_SIZE:-10}
+      - DB_MIN_IDLE=${DB_MIN_IDLE:-2}
+      
+      # AWS Configuration
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-2}
+      - AWS_SES_FROM_EMAIL=${AWS_SES_FROM_EMAIL:-noreply@example.com}
+      - AWS_SES_RATE_LIMIT_PER_SECOND=${AWS_SES_RATE_LIMIT_PER_SECOND:-200}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-}
+      
+      # Stripe Configuration (optional - can also be loaded from database)
+      - STRIPE_DEFAULT_API_KEY=${STRIPE_DEFAULT_API_KEY:-}
+      
+      # Batch Job Configuration (optional)
+      - SUBSCRIPTION_RENEWAL_ENABLED=${SUBSCRIPTION_RENEWAL_ENABLED:-true}
+      - SUBSCRIPTION_RENEWAL_CRON=${SUBSCRIPTION_RENEWAL_CRON:-0 0 */6 * * *}
+      - SUBSCRIPTION_RENEWAL_BATCH_SIZE=${SUBSCRIPTION_RENEWAL_BATCH_SIZE:-100}
+      - SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS=${SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS:-10000}
+      - SUBSCRIPTION_RENEWAL_DAYS_BEFORE=${SUBSCRIPTION_RENEWAL_DAYS_BEFORE:-7}
+      - EMAIL_BATCH_ENABLED=${EMAIL_BATCH_ENABLED:-true}
+      - EMAIL_BATCH_CRON=${EMAIL_BATCH_CRON:-0 0 2 * * *}
+      - EMAIL_BATCH_SIZE=${EMAIL_BATCH_SIZE:-50}
+      - EMAIL_BATCH_MAX_EMAILS=${EMAIL_BATCH_MAX_EMAILS:-10000}
+      
+      # Temp directory (machine-agnostic, set by Dockerfile)
+      - JAVA_TMPDIR=/tmp/spring-boot-tomcat
+      - TMPDIR=/tmp/spring-boot-tomcat
+    networks:
+      - batch-jobs-network
+      - postgres-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/batch-jobs/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+networks:
+  batch-jobs-network:
+    driver: bridge
+  postgres-network:
+    external: true
+    name: event_site_manager_db_default
+

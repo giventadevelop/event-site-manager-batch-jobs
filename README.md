@@ -46,7 +46,7 @@ This service extracts batch processing functionality from the main backend (`mal
 RDS_ENDPOINT=localhost
 DB_NAME=event_site_manager_db
 DB_USERNAME=event_site_app
-DB_PASSWORD=event_site_app!
+DB_PASSWORD=your-database-password
 DB_MAX_POOL_SIZE=10
 DB_MIN_IDLE=2
 
@@ -87,7 +87,7 @@ mvn clean package
 export RDS_ENDPOINT=localhost
 export DB_NAME=event_site_manager_db
 export DB_USERNAME=event_site_app
-export DB_PASSWORD=event_site_app!
+export DB_PASSWORD=your-database-password
 export DB_MAX_POOL_SIZE=10
 export DB_MIN_IDLE=2
 
