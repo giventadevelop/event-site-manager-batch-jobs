@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Job: Subscription Filter Support for Testing - Implementation Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2D2A26;
+            background-color: #F5F1E8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(139, 125, 107, 0.1);
+        }
+
+        h1 {
+            font-family: 'Crimson Text', serif;
+            font-size: 2.5em;
+            color: #8B7D6B;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #8B7D6B;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-family: 'Crimson Text', serif;
+            font-size: 2em;
+            color: #6B4E3D;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #A0926B;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.5em;
+            color: #8B7D6B;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.25em;
+            color: #6B4E3D;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background-color: #EDE7D3;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: #6B4E3D;
+        }
+
+        pre {
+            background-color: #2D2A26;
+            color: #F5F1E8;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: #F5F1E8;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #FFFFFF;
+        }
+
+        th, td {
+            border: 1px solid #A0926B;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #8B7D6B;
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #F5F1E8;
+        }
+
+        .info-box {
+            background-color: #EDE7D3;
+            border-left: 4px solid #8B7D6B;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background-color: #FFF4E6;
+            border-left: 4px solid #A67C52;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4A6741;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .critical-box {
+            background-color: #FFEBEE;
+            border-left: 4px solid #8B4A42;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .code-block-title {
+            background-color: #6B4E3D;
+            color: #FFFFFF;
+            padding: 8px 15px;
+            border-radius: 8px 8px 0 0;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 0;
+        }
+
+        .code-block-title + pre {
+            margin-top: 0;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-primary {
+            background-color: #8B7D6B;
+            color: #FFFFFF;
+        }
+
+        .badge-success {
+            background-color: #4A6741;
+            color: #FFFFFF;
+        }
+
+        .badge-warning {
+            background-color: #A67C52;
+            color: #FFFFFF;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #A0926B;
+            text-align: center;
+            color: #8B7D6B;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Batch Job: Subscription Filter Support for Testing <span class="badge badge-primary">v1.0</span></h1>
+
+        <div class="critical-box">
+            <p><strong>⚠️ CRITICAL: This is a TESTING/DEVELOPMENT feature only!</strong></p>
+            <ul style="margin-top: 10px;">
+                <li><strong>SCHEDULED JOB UNCHANGED</strong> - The batch job that runs every 6 hours remains completely unaffected</li>
+                <li><strong>7-DAY FILTER PRESERVED</strong> - All jobs (scheduled and manual) still only process subscriptions expiring within 7 days</li>
+                <li><strong>TESTING ONLY</strong> - When <code>stripeSubscriptionId</code> is provided, filters by specific subscription ID (still validates 7-day renewal)</li>
+                <li><strong>CONDITIONAL LOGIC</strong> - Query changes only when testing specific subscription IDs, but renewal date validation always applies</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <p><strong>Project Location:</strong> <code>E:\project_workspace\event-site-manager-batch-jobs</code></p>
+            <p><strong>Purpose:</strong> Support filtering by <code>stripeSubscriptionId</code> for testing specific subscriptions, while preserving existing scheduled job behavior and maintaining 7-day renewal date validation</p>
+        </div>
+
+        <h2>1. Overview</h2>
+
+        <h3>1.1 Current Situation</h3>
+        <p>The batch job query only processes subscriptions expiring within 7 days. When testing specific subscriptions, we need to be able to target a specific subscription ID, but the 7-day renewal date validation is still enforced to ensure only subscriptions approaching renewal are processed.</p>
+
+        <div class="warning-box">
+            <p><strong>Current Batch Job Log:</strong></p>
+            <pre><code>Received request to trigger subscription renewal job for tenant: tenant_demo_002,
+stripeSubscriptionId: null
+
+Loaded 0 subscriptions for renewal processing</code></pre>
+        </div>
+
+        <h3>1.2 What We're Adding</h3>
+        <ul>
+            <li><strong>Conditional query logic</strong> - If <code>stripeSubscriptionId</code> is provided, filter by it and process only that subscription</li>
+            <li><strong>Preserve scheduled job behavior</strong> - If <code>stripeSubscriptionId</code> is NOT provided, use existing 7-day filter</li>
+            <li><strong>Repository method support</strong> - Added <code>findByStripeSubscriptionIdAndTenantId</code> method to repository</li>
+            <li><strong>Reader configuration</strong> - Reader accepts <code>stripeSubscriptionId</code> via setter method</li>
+        </ul>
+
+        <h3>1.3 What Remains Unchanged</h3>
+        <div class="success-box">
+            <p><strong>✅ The scheduled batch job (runs every 6 hours) is completely unaffected:</strong></p>
+            <ul>
+                <li>Scheduled jobs don't provide <code>stripeSubscriptionId</code> parameter (passes <code>null</code>)</li>
+                <li>Reader uses existing 7-day filter logic (unchanged behavior)</li>
+                <li>Still processes subscriptions expiring within 7 days</li>
+                <li>No performance impact on scheduled runs</li>
+                <li>When <code>stripeSubscriptionId</code> is provided, renewal date check is still performed (subscription must be approaching renewal)</li>
+            </ul>
+        </div>
+
+        <h2>2. Implementation</h2>
+
+        <h3>2.1 Files Modified</h3>
+        <ul>
+            <li><strong>BatchJobRequest.java</strong> - Added <code>stripeSubscriptionId</code> field</li>
+            <li><strong>BatchJobOrchestrationService.java</strong> - Updated to accept and pass <code>stripeSubscriptionId</code></li>
+            <li><strong>BatchJobController.java</strong> - Updated to pass <code>stripeSubscriptionId</code> from request</li>
+            <li><strong>SubscriptionRenewalReader.java</strong> - Added filtering logic for <code>stripeSubscriptionId</code></li>
+            <li><strong>MembershipSubscriptionRepository.java</strong> - Added <code>findByStripeSubscriptionIdAndTenantId</code> method</li>
+            <li><strong>SubscriptionRenewalProcessor.java</strong> - Added <code>setStripeSubscriptionId</code> method</li>
+            <li><strong>BatchJobScheduler.java</strong> - Updated to pass <code>null</code> for <code>stripeSubscriptionId</code></li>
+        </ul>
+
+        <h3>2.2 SubscriptionRenewalReader Implementation</h3>
+        <p><strong>File:</strong> <code>src/main/java/com/eventmanager/batch/job/subscription/reader/SubscriptionRenewalReader.java</code></p>
+
+        <div class="code-block-title">Java - Key Changes in SubscriptionRenewalReader</div>
+        <pre><code>// Added field to store stripeSubscriptionId
+private String stripeSubscriptionId;
+
+// Added setter method
+public void setStripeSubscriptionId(String stripeSubscriptionId) {
+    this.stripeSubscriptionId = stripeSubscriptionId;
+    this.subscriptionIterator = null; // Reset iterator
+}
+
+// Modified read() method with conditional logic
+@Override
+public MembershipSubscription read() throws Exception {
+    if (subscriptionIterator == null) {
+        LocalDate checkDate = LocalDate.now().plusDays(daysBeforeRenewal);
+        List&lt;MembershipSubscription&gt; subscriptions;
+
+        // ✅ KEY CHANGE: If stripeSubscriptionId is provided, process only that subscription
+        if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+            if (currentTenantId != null && !currentTenantId.isEmpty()) {
+                Optional&lt;MembershipSubscription&gt; subscription = repository
+                    .findByStripeSubscriptionIdAndTenantId(stripeSubscriptionId, currentTenantId);
+
+                if (subscription.isPresent()) {
+                    MembershipSubscription sub = subscription.get();
+                    // Still check if it's approaching renewal (7-day filter still applies)
+                    if (sub.getCurrentPeriodEnd() != null &&
+                        (sub.getCurrentPeriodEnd().isBefore(checkDate) ||
+                         sub.getCurrentPeriodEnd().isEqual(checkDate)) &&
+                        !Boolean.TRUE.equals(sub.getCancelAtPeriodEnd()) &&
+                        "ACTIVE".equals(sub.getSubscriptionStatus())) {
+                        subscriptions = Collections.singletonList(sub);
+                    } else {
+                        subscriptions = Collections.emptyList();
+                    }
+                } else {
+                    subscriptions = Collections.emptyList();
+                }
+            } else {
+                // Fallback: find by stripeSubscriptionId only
+                MembershipSubscription subscription = repository
+                    .findByStripeSubscriptionId(stripeSubscriptionId);
+                // ... similar validation logic ...
+            }
+        } else if (currentTenantId != null && !currentTenantId.isEmpty()) {
+            // Existing logic: Process all subscriptions for tenant with 7-day filter
+            subscriptions = repository.findByTenantIdAndSubscriptionStatus(currentTenantId, "ACTIVE");
+            subscriptions = subscriptions.stream()
+                .filter(s -> s.getCurrentPeriodEnd() != null &&
+                    (s.getCurrentPeriodEnd().isBefore(checkDate) ||
+                     s.getCurrentPeriodEnd().isEqual(checkDate)))
+                .filter(s -> !Boolean.TRUE.equals(s.getCancelAtPeriodEnd()))
+                .filter(s -> s.getStripeSubscriptionId() != null &&
+                    !s.getStripeSubscriptionId().isEmpty())
+                .limit(maxSubscriptions)
+                .toList();
+        } else {
+            // Existing logic: Process all subscriptions with 7-day filter
+            subscriptions = repository.findSubscriptionsApproachingRenewal(checkDate);
+            // ... limit logic ...
+        }
+
+        subscriptionIterator = subscriptions.iterator();
+        log.info("Loaded {} subscriptions for renewal processing", subscriptions.size());
+    }
+
+    if (subscriptionIterator.hasNext()) {
+        return subscriptionIterator.next();
+    }
+    return null;
+}</code></pre>
+
+        <h3>2.3 Repository Method Added</h3>
+        <div class="code-block-title">Java - MembershipSubscriptionRepository</div>
+        <pre><code>/**
+ * Find subscription by Stripe subscription ID and tenant ID.
+ */
+@Query("SELECT s FROM MembershipSubscription s WHERE " +
+       "s.stripeSubscriptionId = :stripeSubscriptionId AND s.tenantId = :tenantId")
+Optional&lt;MembershipSubscription&gt; findByStripeSubscriptionIdAndTenantId(
+    @Param("stripeSubscriptionId") String stripeSubscriptionId,
+    @Param("tenantId") String tenantId
+);</code></pre>
+
+        <h3>2.4 Key Changes Summary</h3>
+        <ol>
+            <li><strong>Added <code>stripeSubscriptionId</code> field</strong> - Stored in reader for filtering</li>
+            <li><strong>Added setter method</strong> - Allows service to configure reader with subscription ID</li>
+            <li><strong>Conditional query logic</strong> - When <code>stripeSubscriptionId</code> is provided, query specific subscription</li>
+            <li><strong>Preserve 7-day filter</strong> - Renewal date check still applies even when filtering by subscription ID</li>
+            <li><strong>Repository method</strong> - Added efficient lookup method for single subscription</li>
+        </ol>
+
+        <h2>3. Query Behavior Comparison</h2>
+
+        <h3>3.1 Scheduled Job (Every 6 Hours) - Unchanged</h3>
+        <div class="success-box">
+            <p><strong>Service Call:</strong> <code>runSubscriptionRenewalJob(null, null, null, null)</code></p>
+            <p><strong>Reader Configuration:</strong> <code>stripeSubscriptionId = null</code></p>
+            <p><strong>Query Behavior:</strong></p>
+            <pre><code>// Reader uses existing logic path:
+if (stripeSubscriptionId == null) {
+    // Uses repository.findSubscriptionsApproachingRenewal(checkDate)
+    // which applies 7-day filter via repository query
+}
+
+// Repository query (existing):
+SELECT s FROM MembershipSubscription s WHERE
+s.subscriptionStatus IN ('ACTIVE', 'TRIAL')
+AND s.currentPeriodEnd &lt;= :checkDate  -- ✅ 7-day filter applied
+AND s.cancelAtPeriodEnd = false
+AND s.stripeSubscriptionId IS NOT NULL
+ORDER BY s.currentPeriodEnd ASC</code></pre>
+            <p><strong>Result:</strong> ✅ Same behavior as before - processes subscriptions expiring within 7 days</p>
+        </div>
+
+        <h3>3.2 Manual Trigger for Testing - New Behavior</h3>
+        <div class="info-box">
+            <p><strong>Service Call:</strong> <code>runSubscriptionRenewalJob(tenantId, batchSize, maxSubscriptions, stripeSubscriptionId)</code></p>
+            <p><strong>Reader Configuration:</strong> <code>setStripeSubscriptionId(stripeSubscriptionId)</code> called</p>
+            <p><strong>Query Behavior:</strong></p>
+            <pre><code>// Reader uses new logic path:
+if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+    // Uses repository.findByStripeSubscriptionIdAndTenantId()
+    // Then validates renewal date in Java code
+    if (sub.getCurrentPeriodEnd() != null &&
+        (sub.getCurrentPeriodEnd().isBefore(checkDate) ||
+         sub.getCurrentPeriodEnd().isEqual(checkDate))) {
+        // ✅ Subscription found and approaching renewal
+    }
+}
+
+// Repository query (new):
+SELECT s FROM MembershipSubscription s WHERE
+s.stripeSubscriptionId = :stripeSubscriptionId
+AND s.tenantId = :tenantId
+
+// ✅ Then Java code validates:
+// - currentPeriodEnd &lt;= checkDate (7-day filter still applied)
+// - cancelAtPeriodEnd = false
+// - subscriptionStatus = 'ACTIVE'</code></pre>
+            <p><strong>Result:</strong> ✅ Finds specific subscription if it exists and is approaching renewal (within 7 days)</p>
+            <p><strong>Note:</strong> The 7-day renewal date check is still performed - subscriptions more than 7 days away will not be processed</p>
+        </div>
+
+        <h2>4. Impact Assessment</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>stripeSubscriptionId Provided?</th>
+                    <th>Query Behavior</th>
+                    <th>Impact</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Scheduled Job (every 6 hours)</td>
+                    <td>❌ No</td>
+                    <td>7-day filter applied</td>
+                    <td>✅ No change - existing behavior</td>
+                </tr>
+                <tr>
+                    <td>Manual Trigger (testing)</td>
+                    <td>✅ Yes</td>
+                    <td>Subscription ID filter, 7-day renewal check still applied</td>
+                    <td>✅ New feature - allows testing specific subscription</td>
+                </tr>
+                <tr>
+                    <td>Manual Trigger (all subscriptions)</td>
+                    <td>❌ No</td>
+                    <td>7-day filter applied</td>
+                    <td>✅ Same as scheduled job</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>5. Testing Scenarios</h2>
+
+        <h3>5.1 Scenario 1: Scheduled Job (Unchanged)</h3>
+        <div class="success-box">
+            <p><strong>Trigger:</strong> Automated cron job (every 6 hours)</p>
+            <p><strong>Parameters:</strong> <code>tenantId</code> only</p>
+            <p><strong>Query:</strong> Uses 7-day filter</p>
+            <p><strong>Result:</strong> Processes subscriptions expiring within 7 days</p>
+            <p><strong>Status:</strong> ✅ Unchanged - works exactly as before</p>
+        </div>
+
+        <h3>5.2 Scenario 2: Test Specific Subscription</h3>
+        <div class="info-box">
+            <p><strong>Trigger:</strong> Manual API call with <code>stripeSubscriptionId</code></p>
+            <p><strong>Parameters:</strong> <code>tenantId</code> and <code>stripeSubscriptionId</code></p>
+            <p><strong>Query:</strong> Filters by subscription ID, validates 7-day renewal check</p>
+            <p><strong>Result:</strong> Finds and processes specific subscription if it's approaching renewal (within 7 days)</p>
+            <p><strong>Status:</strong> ✅ New feature - enables testing specific subscription</p>
+            <p><strong>Note:</strong> Subscription must still be within 7 days of renewal to be processed</p>
+        </div>
+
+        <h3>5.3 Scenario 3: Test All Subscriptions (Manual)</h3>
+        <div class="success-box">
+            <p><strong>Trigger:</strong> Manual API call without <code>stripeSubscriptionId</code></p>
+            <p><strong>Parameters:</strong> <code>tenantId</code> only</p>
+            <p><strong>Query:</strong> Uses 7-day filter</p>
+            <p><strong>Result:</strong> Processes subscriptions expiring within 7 days</p>
+            <p><strong>Status:</strong> ✅ Same as scheduled job</p>
+        </div>
+
+        <h2>6. Verification Steps</h2>
+
+        <ol>
+            <li><strong>Deploy the batch job changes</strong></li>
+            <li><strong>Trigger batch job with subscription ID:</strong>
+                <pre><code>node scripts/test-subscription-renewal/trigger-batch-job.js \
+  --tenant-id=tenant_demo_002 \
+  --subscription-id=sub_1SeifsK5BrggeAHMBvg2XE93</code></pre>
+            </li>
+            <li><strong>Check batch job logs</strong> - Should see:
+                <pre><code>Received request to trigger subscription renewal job for tenant: tenant_demo_002,
+stripeSubscriptionId: sub_1SeifsK5BrggeAHMBvg2XE93
+
+Loaded 1 subscriptions for renewal processing  -- ✅ Should find the subscription</code></pre>
+            </li>
+            <li><strong>Verify database updated</strong> - Run verification script:
+                <pre><code>node scripts/test-subscription-renewal/verify-database.js \
+  --subscription-id=sub_1SeifsK5BrggeAHMBvg2XE93 \
+  --tenant-id=tenant_demo_002</code></pre>
+            </li>
+            <li><strong>Verify scheduled job still works</strong> - Wait for next scheduled run and verify it processes subscriptions with 7-day filter</li>
+        </ol>
+
+        <h2>7. Important Notes</h2>
+
+        <div class="warning-box">
+            <p><strong>⚠️ Performance Considerations:</strong></p>
+            <ul>
+                <li>When <code>stripeSubscriptionId</code> is provided, the query uses <code>findByStripeSubscriptionIdAndTenantId</code> which should use indexes on both fields (fast lookup)</li>
+                <li>When <code>stripeSubscriptionId</code> is NOT provided, the query uses existing repository methods with indexes on <code>current_period_end</code> (unchanged performance)</li>
+                <li>No performance impact on scheduled jobs</li>
+                <li>Single subscription lookup is very efficient (O(1) with proper indexes)</li>
+            </ul>
+        </div>
+
+        <div class="info-box">
+            <p><strong>✅ Backward Compatibility:</strong></p>
+            <ul>
+                <li>Existing scheduled jobs continue to work unchanged</li>
+                <li>Manual triggers without <code>stripeSubscriptionId</code> behave the same as scheduled jobs</li>
+                <li>Only manual triggers WITH <code>stripeSubscriptionId</code> get new behavior</li>
+            </ul>
+        </div>
+
+        <h2>8. Summary</h2>
+
+        <div class="info-box">
+            <p><strong>What we're doing:</strong></p>
+            <ul>
+                <li>✅ Adding conditional query logic based on job parameters</li>
+                <li>✅ Supporting <code>stripeSubscriptionId</code> filter for testing</li>
+                <li>✅ Preserving 7-day filter for scheduled jobs</li>
+                <li>✅ Maintaining backward compatibility</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            <p><strong>What we're NOT doing:</strong></p>
+            <ul>
+                <li>❌ Not changing scheduled job behavior</li>
+                <li>❌ Not removing the 7-day filter (it's still applied even when filtering by subscription ID)</li>
+                <li>❌ Not affecting production batch job runs</li>
+                <li>❌ Not creating new batch job types</li>
+                <li>❌ Not bypassing renewal date validation</li>
+            </ul>
+        </div>
+
+        <div class="success-box">
+            <p><strong>Key Design Principle:</strong></p>
+            <p><strong>"When <code>stripeSubscriptionId</code> is provided → Testing mode (filter by specific subscription ID, still validate 7-day renewal)</strong></p>
+            <p><strong>When <code>stripeSubscriptionId</code> is NOT provided → Production mode (use 7-day filter for all subscriptions)"</strong></p>
+            <p><strong>Important:</strong> The 7-day renewal date check is always applied - subscriptions must be approaching renewal to be processed, regardless of whether <code>stripeSubscriptionId</code> is provided.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Batch Job: Subscription Filter Support for Testing - Implementation Guide</strong></p>
+            <p>Version 1.0 | Date: 2025-12-16</p>
+            <p><strong>Related Documentation:</strong> <code>BATCH_JOB_STRIPE_SUBSCRIPTION_ID_SUPPORT.md</code> (Implementation Guide)</p>
+        </div>
+    </div>
+</body>
+</html>
+

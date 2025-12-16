@@ -57,8 +57,9 @@ public class BatchJobOrchestrationService {
     /**
      * Run subscription renewal batch job.
      */
-    public BatchJobResponse runSubscriptionRenewalJob(String tenantId, Integer batchSize, Integer maxSubscriptions) {
-        log.info("Starting subscription renewal batch job for tenant: {}", tenantId);
+    public BatchJobResponse runSubscriptionRenewalJob(String tenantId, Integer batchSize, Integer maxSubscriptions, String stripeSubscriptionId) {
+        log.info("Starting subscription renewal batch job for tenant: {}, stripeSubscriptionId: {}",
+            tenantId, stripeSubscriptionId);
 
         // Create job execution record
         BatchJobExecution execution = batchJobExecutionService.createJobExecution(
@@ -66,9 +67,10 @@ public class BatchJobOrchestrationService {
             "SUBSCRIPTION_RENEWAL",
             tenantId,
             "API",
-            String.format("{\"tenantId\":\"%s\",\"batchSize\":%d,\"maxSubscriptions\":%d}",
+            String.format("{\"tenantId\":\"%s\",\"batchSize\":%d,\"maxSubscriptions\":%d,\"stripeSubscriptionId\":\"%s\"}",
                 tenantId, batchSize != null ? batchSize : defaultBatchSize,
-                maxSubscriptions != null ? maxSubscriptions : defaultMaxSubscriptions)
+                maxSubscriptions != null ? maxSubscriptions : defaultMaxSubscriptions,
+                stripeSubscriptionId != null ? stripeSubscriptionId : "")
         );
 
         try {
@@ -76,14 +78,32 @@ public class BatchJobOrchestrationService {
             if (tenantId != null && !tenantId.isEmpty()) {
                 subscriptionRenewalReader.setTenantId(tenantId);
                 subscriptionRenewalProcessor.setTenantId(tenantId);
+            } else {
+                // Warning: tenantId is null - this will process subscriptions for all tenants
+                // This is not recommended for multi-tenant systems
+                log.warn("tenantId is null - batch job will process subscriptions for all tenants. " +
+                        "This is not recommended for multi-tenant systems. " +
+                        "Scheduled jobs should always provide tenantId.");
+            }
+
+            // Configure reader and processor for stripeSubscriptionId if provided
+            if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+                subscriptionRenewalReader.setStripeSubscriptionId(stripeSubscriptionId);
+                subscriptionRenewalProcessor.setStripeSubscriptionId(stripeSubscriptionId);
             }
 
             // Build job parameters
-            JobParameters jobParameters = new JobParametersBuilder()
+            JobParametersBuilder jobParametersBuilder = new JobParametersBuilder()
                 .addString("jobId", UUID.randomUUID().toString())
                 .addString("tenantId", tenantId != null ? tenantId : "ALL")
-                .addLong("timestamp", System.currentTimeMillis())
-                .toJobParameters();
+                .addLong("timestamp", System.currentTimeMillis());
+
+            // Add stripeSubscriptionId to job parameters if provided
+            if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+                jobParametersBuilder.addString("stripeSubscriptionId", stripeSubscriptionId);
+            }
+
+            JobParameters jobParameters = jobParametersBuilder.toJobParameters();
 
             // Launch job asynchronously
             jobLauncher.run(subscriptionRenewalJob, jobParameters);

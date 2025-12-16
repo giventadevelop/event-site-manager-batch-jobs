@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for MembershipSubscription entity.
@@ -45,7 +46,19 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
            "AND s.stripeSubscriptionId IS NOT NULL " +
            "ORDER BY s.id ASC")
     List<MembershipSubscription> findActiveSubscriptionsForTenant(@Param("tenantId") String tenantId);
+
+    /**
+     * Find subscription by Stripe subscription ID and tenant ID.
+     */
+    @Query("SELECT s FROM MembershipSubscription s WHERE s.stripeSubscriptionId = :stripeSubscriptionId AND s.tenantId = :tenantId")
+    Optional<MembershipSubscription> findByStripeSubscriptionIdAndTenantId(
+        @Param("stripeSubscriptionId") String stripeSubscriptionId,
+        @Param("tenantId") String tenantId
+    );
 }
+
+
+
 
 
 

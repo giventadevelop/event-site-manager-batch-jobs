@@ -25,12 +25,43 @@ public class SubscriptionRenewalProcessor implements ItemProcessor<MembershipSub
 
     private final StripeService stripeService;
     private String currentTenantId;
+    private String stripeSubscriptionId;
+
+    // Cache to track last initialized tenant to avoid repeated DB reads and decryption
+    private String lastInitializedTenantId;
 
     /**
      * Set the tenant ID for Stripe initialization.
+     * This will trigger Stripe initialization once before processing subscriptions.
      */
     public void setTenantId(String tenantId) {
         this.currentTenantId = tenantId;
+        // Reset last initialized tenant to force initialization on first subscription
+        this.lastInitializedTenantId = null;
+    }
+
+    /**
+     * Set the Stripe subscription ID. Used for logging and tracking purposes.
+     */
+    public void setStripeSubscriptionId(String stripeSubscriptionId) {
+        this.stripeSubscriptionId = stripeSubscriptionId;
+    }
+
+    /**
+     * Initialize Stripe for tenant if not already initialized.
+     * This ensures we only read payment provider config and decrypt keys once per tenant.
+     */
+    private void ensureStripeInitialized(String tenantId) {
+        // Only initialize if tenant changed or not yet initialized
+        if (lastInitializedTenantId == null || !lastInitializedTenantId.equals(tenantId)) {
+            log.debug("Initializing Stripe for tenant: {} (previous tenant: {})",
+                tenantId, lastInitializedTenantId);
+            stripeService.initStripe(tenantId);
+            lastInitializedTenantId = tenantId;
+            log.debug("Stripe initialized successfully for tenant: {}", tenantId);
+        } else {
+            log.trace("Stripe already initialized for tenant: {}, skipping re-initialization", tenantId);
+        }
     }
 
     @Override
@@ -41,12 +72,13 @@ public class SubscriptionRenewalProcessor implements ItemProcessor<MembershipSub
         }
 
         try {
-            // Initialize Stripe for tenant
-            if (currentTenantId != null && !currentTenantId.isEmpty()) {
-                stripeService.initStripe(currentTenantId);
-            } else {
-                stripeService.initStripe(subscription.getTenantId());
-            }
+            // Determine tenant ID to use
+            String tenantIdToUse = (currentTenantId != null && !currentTenantId.isEmpty())
+                ? currentTenantId
+                : subscription.getTenantId();
+
+            // Initialize Stripe for tenant (only once per tenant - cached)
+            ensureStripeInitialized(tenantIdToUse);
 
             // Fetch latest subscription data from Stripe
             Subscription stripeSubscription = stripeService.retrieveSubscription(subscription.getStripeSubscriptionId());
@@ -95,6 +127,9 @@ public class SubscriptionRenewalProcessor implements ItemProcessor<MembershipSub
         return Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate();
     }
 }
+
+
+
 
 
 

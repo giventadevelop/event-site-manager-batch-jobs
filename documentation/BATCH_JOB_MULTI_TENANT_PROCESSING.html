@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Job: Multi-Tenant Processing - Analysis and Implementation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2D2A26;
+            background-color: #F5F1E8;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(139, 125, 107, 0.1);
+        }
+
+        h1 {
+            font-family: 'Crimson Text', serif;
+            font-size: 2.5em;
+            color: #8B7D6B;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #8B7D6B;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-family: 'Crimson Text', serif;
+            font-size: 2em;
+            color: #6B4E3D;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #A0926B;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.5em;
+            color: #8B7D6B;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            font-family: 'Crimson Text', serif;
+            font-size: 1.25em;
+            color: #6B4E3D;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        code {
+            background-color: #EDE7D3;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: #6B4E3D;
+        }
+
+        pre {
+            background-color: #2D2A26;
+            color: #F5F1E8;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: #F5F1E8;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #FFFFFF;
+        }
+
+        th, td {
+            border: 1px solid #A0926B;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #8B7D6B;
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #F5F1E8;
+        }
+
+        .info-box {
+            background-color: #EDE7D3;
+            border-left: 4px solid #8B7D6B;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background-color: #FFF4E6;
+            border-left: 4px solid #A67C52;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4A6741;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .critical-box {
+            background-color: #FFEBEE;
+            border-left: 4px solid #8B4A42;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .code-block-title {
+            background-color: #6B4E3D;
+            color: #FFFFFF;
+            padding: 8px 15px;
+            border-radius: 8px 8px 0 0;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 0;
+        }
+
+        .code-block-title + pre {
+            margin-top: 0;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-primary {
+            background-color: #8B7D6B;
+            color: #FFFFFF;
+        }
+
+        .badge-warning {
+            background-color: #A67C52;
+            color: #FFFFFF;
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #A0926B;
+            text-align: center;
+            color: #8B7D6B;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Batch Job: Multi-Tenant Processing Analysis <span class="badge badge-primary">v1.0</span></h1>
+
+        <div class="critical-box">
+            <p><strong>⚠️ CRITICAL QUESTION:</strong> Does the scheduled batch job process ALL tenants or just ONE tenant?</p>
+            <p style="margin-top: 10px;"><strong>Answer:</strong> The scheduled batch job should process <strong>ALL unique tenant IDs</strong> from the <code>tenant_settings</code> table, running the batch job for each tenant separately.</p>
+        </div>
+
+        <h2>1. Current Situation Analysis</h2>
+
+        <h3>1.1 Current Query (Problem)</h3>
+        <p>The current batch job query does <strong>NOT filter by tenant_id</strong>, which means it processes subscriptions from <strong>ALL tenants in a single run</strong>:</p>
+
+        <div class="code-block-title">SQL - Current Query (INCORRECT for Multi-Tenant)</div>
+        <pre><code>SELECT * FROM membership_subscription
+WHERE subscription_status IN ('ACTIVE', 'TRIAL')
+AND current_period_end <= CURRENT_DATE + INTERVAL '7 days'
+AND cancel_at_period_end = false
+ORDER BY current_period_end ASC</code></pre>
+
+        <div class="warning-box">
+            <p><strong>⚠️ Problem:</strong> This query processes subscriptions from <strong>ALL tenants</strong> in one batch job run. This is incorrect for multi-tenant systems because:</p>
+            <ul>
+                <li>Each tenant has separate Stripe accounts/API keys</li>
+                <li>Tenant-specific error handling is needed</li>
+                <li>Tenant-specific rate limiting is required</li>
+                <li>Better to process tenants separately for isolation and error recovery</li>
+            </ul>
+        </div>
+
+        <h3>1.2 Expected Behavior (Correct)</h3>
+        <p>The scheduled batch job (runs every 6 hours) should:</p>
+        <ol>
+            <li><strong>Query all unique tenant IDs</strong> from <code>tenant_settings</code> table</li>
+            <li><strong>Loop through each tenant</strong> and run the batch job separately for each</li>
+            <li><strong>Process subscriptions per tenant</strong> with tenant-specific Stripe API keys</li>
+            <li><strong>Handle errors per tenant</strong> - if one tenant fails, others continue</li>
+        </ol>
+
+        <h2>2. Correct Implementation</h2>
+
+        <h3>2.1 Scheduled Job Orchestrator (Backend)</h3>
+        <p><strong>Location:</strong> Backend Project (`E:\project_workspace\malayalees-us-site-boot`)</p>
+        <p><strong>Purpose:</strong> Query all tenants and trigger batch job for each tenant</p>
+
+        <div class="code-block-title">Java - Scheduled Job Orchestrator</div>
+        <pre><code>@Scheduled(cron = "0 */6 * * *") // Every 6 hours
+public void scheduledSubscriptionRenewalJob() {
+    log.info("Starting scheduled subscription renewal batch job for all tenants");
+
+    // 1. Query all unique tenant IDs from tenant_settings table
+    List&lt;String&gt; tenantIds = tenantSettingsRepository.findAllDistinctTenantIds();
+
+    log.info("Found {} tenants to process", tenantIds.size());
+
+    // 2. Process each tenant separately
+    for (String tenantId : tenantIds) {
+        try {
+            log.info("Processing tenant: {}", tenantId);
+
+            // 3. Trigger batch job for this specific tenant
+            BatchJobRequest request = BatchJobRequest.builder()
+                .tenantId(tenantId)
+                .batchSize(100)
+                .maxSubscriptions(10000)
+                .build();
+
+            BatchJobResponse response = batchJobService.submitSubscriptionRenewalJob(request);
+
+            log.info("Batch job submitted for tenant {}: jobId={}",
+                tenantId, response.getJobId());
+
+            // 4. Rate limiting between tenants (optional)
+            Thread.sleep(1000); // 1 second delay between tenants
+
+        } catch (Exception e) {
+            log.error("Failed to process tenant {}: {}", tenantId, e.getMessage(), e);
+            // Continue with next tenant even if one fails
+        }
+    }
+
+    log.info("Completed scheduled subscription renewal batch job for all tenants");
+}</code></pre>
+
+        <h3>2.2 Tenant Settings Repository Query</h3>
+        <div class="code-block-title">Java - Repository Method</div>
+        <pre><code>@Repository
+public interface TenantSettingsRepository extends JpaRepository&lt;TenantSettings, Long&gt; {
+
+    /**
+     * Get all distinct tenant IDs from tenant_settings table
+     * Used by scheduled batch job to process all tenants
+     */
+    @Query("SELECT DISTINCT t.tenantId FROM TenantSettings t WHERE t.isActive = true")
+    List&lt;String&gt; findAllDistinctTenantIds();
+
+    // Alternative: Use native SQL query
+    // @Query(value = "SELECT DISTINCT tenant_id FROM tenant_settings WHERE is_active = true",
+    //        nativeQuery = true)
+    // List&lt;String&gt; findAllDistinctTenantIds();
+}</code></pre>
+
+        <h3>2.3 Batch Job Query (Per Tenant)</h3>
+        <p><strong>Location:</strong> Batch Job Project (`E:\project_workspace\event-site-manager-batch-jobs`)</p>
+        <p><strong>Purpose:</strong> Process subscriptions for ONE specific tenant</p>
+
+        <div class="code-block-title">Java - Batch Job Reader (Per Tenant)</div>
+        <pre><code>@Bean
+@StepScope
+public ItemReader&lt;MembershipSubscription&gt; subscriptionReader(
+        @Value("#{jobParameters['tenantId']}") String tenantId,
+        @Value("#{jobParameters['stripeSubscriptionId']}") String stripeSubscriptionId) {
+
+    JdbcCursorItemReaderBuilder&lt;MembershipSubscription&gt; builder =
+        new JdbcCursorItemReaderBuilder&lt;MembershipSubscription&gt;()
+            .dataSource(dataSource)
+            .rowMapper(new BeanPropertyRowMapper&lt;&gt;(MembershipSubscription.class));
+
+    // Build dynamic SQL
+    StringBuilder sql = new StringBuilder(
+        "SELECT * FROM membership_subscription WHERE 1=1 "
+    );
+
+    // ✅ CRITICAL: Always filter by tenant_id (required for multi-tenant)
+    if (tenantId != null && !tenantId.isEmpty()) {
+        sql.append("AND tenant_id = :tenantId ");
+    } else {
+        throw new IllegalArgumentException("tenantId is required for batch job");
+    }
+
+    // Conditional logic for subscription ID filter (testing)
+    if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+        sql.append("AND stripe_subscription_id = :stripeSubscriptionId ");
+    } else {
+        // Scheduled job mode: Apply 7-day filter
+        sql.append("AND current_period_end <= CURRENT_DATE + INTERVAL '7 days' ");
+    }
+
+    // Common filters
+    sql.append("AND subscription_status IN ('ACTIVE', 'TRIAL') ");
+    sql.append("AND cancel_at_period_end = false ");
+    sql.append("ORDER BY current_period_end ASC");
+
+    builder.sql(sql.toString());
+
+    // Set parameters
+    Map&lt;String, Object&gt; parameters = new HashMap&lt;&gt;();
+    parameters.put("tenantId", tenantId); // Always required
+    if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
+        parameters.put("stripeSubscriptionId", stripeSubscriptionId);
+    }
+    builder.parameterValues(parameters);
+
+    return builder.build();
+}</code></pre>
+
+        <h2>3. Architecture Flow</h2>
+
+        <h3>3.1 Scheduled Job Flow (Every 6 Hours)</h3>
+        <div class="flowchart">
+            <div class="flowchart-container">
+                <div class="flowchart-box primary">Scheduled Cron Job<br/>(Every 6 Hours)</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box">Query tenant_settings table<br/>Get all DISTINCT tenant_id</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box">Loop: For each tenant_id</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box">Trigger Batch Job<br/>(tenantId = current tenant)</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box database">Batch Job Processes<br/>Subscriptions for THIS tenant only</div>
+            </div>
+        </div>
+
+        <h3>3.2 Manual Trigger Flow (Testing)</h3>
+        <div class="flowchart">
+            <div class="flowchart-container">
+                <div class="flowchart-box primary">Manual API Call<br/>(POST /api/cron/subscription-renewal)</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box">Request includes tenantId<br/>(and optionally stripeSubscriptionId)</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box">Trigger Batch Job<br/>(for specified tenant only)</div>
+                <div class="flowchart-arrow"></div>
+                <div class="flowchart-box database">Batch Job Processes<br/>Subscriptions for specified tenant</div>
+            </div>
+        </div>
+
+        <h2>4. SQL Queries</h2>
+
+        <h3>4.1 Query All Tenant IDs</h3>
+        <div class="code-block-title">SQL - Get All Active Tenant IDs</div>
+        <pre><code>-- Get all distinct tenant IDs from tenant_settings table
+SELECT DISTINCT tenant_id
+FROM tenant_settings
+WHERE is_active = true
+ORDER BY tenant_id;
+
+-- Example result:
+-- tenant_demo_001
+-- tenant_demo_002
+-- tenant_demo_003
+-- ...</code></pre>
+
+        <h3>4.2 Batch Job Query (Per Tenant)</h3>
+        <div class="code-block-title">SQL - Process Subscriptions for One Tenant</div>
+        <pre><code>-- Process subscriptions for tenant_demo_002 only
+SELECT * FROM membership_subscription
+WHERE tenant_id = 'tenant_demo_002'  -- ✅ CRITICAL: Filter by tenant
+AND subscription_status IN ('ACTIVE', 'TRIAL')
+AND current_period_end <= CURRENT_DATE + INTERVAL '7 days'
+AND cancel_at_period_end = false
+ORDER BY current_period_end ASC;</code></pre>
+
+        <h2>5. Implementation Checklist</h2>
+
+        <h3>5.1 Backend Project Changes</h3>
+        <ol>
+            <li>✅ Create scheduled method that runs every 6 hours</li>
+            <li>✅ Query all distinct tenant IDs from <code>tenant_settings</code> table</li>
+            <li>✅ Loop through each tenant ID</li>
+            <li>✅ Trigger batch job for each tenant separately</li>
+            <li>✅ Add error handling (continue if one tenant fails)</li>
+            <li>✅ Add logging for each tenant processed</li>
+            <li>✅ Add rate limiting between tenants (optional)</li>
+        </ol>
+
+        <h3>5.2 Batch Job Project Changes</h3>
+        <ol>
+            <li>✅ Require <code>tenantId</code> as mandatory job parameter</li>
+            <li>✅ Always filter query by <code>tenant_id</code></li>
+            <li>✅ Support optional <code>stripeSubscriptionId</code> for testing</li>
+            <li>✅ Use tenant-specific Stripe API keys in processor</li>
+            <li>✅ Add tenant-specific error handling</li>
+        </ol>
+
+        <h2>6. Comparison: Current vs. Correct Implementation</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Current (Incorrect)</th>
+                    <th>Correct Implementation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Tenant Processing</strong></td>
+                    <td>Processes ALL tenants in one query</td>
+                    <td>Processes ONE tenant per batch job run</td>
+                </tr>
+                <tr>
+                    <td><strong>Query Filter</strong></td>
+                    <td>No <code>tenant_id</code> filter</td>
+                    <td>Always filters by <code>tenant_id</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Scheduled Job</strong></td>
+                    <td>Runs once, processes all</td>
+                    <td>Runs once, triggers batch job for each tenant</td>
+                </tr>
+                <tr>
+                    <td><strong>Error Handling</strong></td>
+                    <td>One error affects all tenants</td>
+                    <td>Tenant-specific error handling</td>
+                </tr>
+                <tr>
+                    <td><strong>Stripe API Keys</strong></td>
+                    <td>Unclear which key to use</td>
+                    <td>Uses tenant-specific API key</td>
+                </tr>
+                <tr>
+                    <td><strong>Rate Limiting</strong></td>
+                    <td>Not possible per tenant</td>
+                    <td>Can rate limit per tenant</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>7. Summary</h2>
+
+        <div class="success-box">
+            <p><strong>✅ Correct Behavior:</strong></p>
+            <ul>
+                <li><strong>Scheduled Job (every 6 hours):</strong> Queries all tenant IDs from <code>tenant_settings</code> table and triggers batch job for EACH tenant separately</li>
+                <li><strong>Batch Job:</strong> Always filters by <code>tenant_id</code> - processes subscriptions for ONE tenant per run</li>
+                <li><strong>Manual Trigger:</strong> Can specify <code>tenantId</code> to test specific tenant</li>
+                <li><strong>Multi-Tenant Isolation:</strong> Each tenant processed separately with tenant-specific Stripe API keys</li>
+            </ul>
+        </div>
+
+        <div class="warning-box">
+            <p><strong>⚠️ Current Problem:</strong></p>
+            <p>The current query does NOT filter by <code>tenant_id</code>, which means it processes subscriptions from ALL tenants in a single batch job run. This needs to be fixed to process tenants separately.</p>
+        </div>
+
+        <h2>8. Required Changes</h2>
+
+        <h3>8.1 Backend: Add Scheduled Orchestrator</h3>
+        <p>Add a scheduled method that:</p>
+        <ol>
+            <li>Queries all tenant IDs from <code>tenant_settings</code> table</li>
+            <li>Loops through each tenant</li>
+            <li>Triggers batch job for each tenant</li>
+        </ol>
+
+        <h3>8.2 Batch Job: Always Filter by Tenant ID</h3>
+        <p>Update the batch job query to:</p>
+        <ol>
+            <li>Require <code>tenantId</code> as mandatory parameter</li>
+            <li>Always include <code>WHERE tenant_id = :tenantId</code> in the query</li>
+            <li>Process subscriptions for ONE tenant per batch job run</li>
+        </ol>
+
+        <div class="footer">
+            <p><strong>Batch Job: Multi-Tenant Processing Analysis</strong></p>
+            <p>Version 1.0 | Date: 2025-12-16</p>
+            <p><strong>Key Finding:</strong> Scheduled batch job should process ALL tenants by looping through tenant_settings table and triggering batch job for each tenant separately.</p>
+        </div>
+    </div>
+</body>
+</html>
+

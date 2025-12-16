@@ -27,12 +27,14 @@ public class BatchJobController {
     @PostMapping("/subscription-renewal")
     public ResponseEntity<BatchJobResponse> triggerSubscriptionRenewal(@RequestBody BatchJobRequest request) {
         try {
-            log.info("Received request to trigger subscription renewal job for tenant: {}", request.getTenantId());
+            log.info("Received request to trigger subscription renewal job for tenant: {}, stripeSubscriptionId: {}",
+                request.getTenantId(), request.getStripeSubscriptionId());
 
             BatchJobResponse response = batchJobOrchestrationService.runSubscriptionRenewalJob(
                 request.getTenantId(),
                 request.getBatchSize(),
-                request.getMaxSubscriptions()
+                request.getMaxSubscriptions(),
+                request.getStripeSubscriptionId()
             );
 
             return ResponseEntity.ok(response);
