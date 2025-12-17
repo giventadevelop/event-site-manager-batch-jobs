@@ -36,8 +36,15 @@ public class EmailBatchProcessor implements ItemProcessor<EmailRecipient, EmailR
         }
 
         try {
-            // Build email content
-            Map<String, String> emailContent = emailContentBuilderService.buildEmailContent(template);
+            // Build email content with tenantId from recipient for fallback
+            // Use tenantId from recipient (which comes from BatchJobEmailRequest) for fallback lookups
+            String tenantIdForFallback = recipient.getTenantId();
+            Map<String, String> emailContent = emailContentBuilderService.buildEmailContent(
+                template,
+                null, // subjectOverride
+                null, // bodyHtmlOverride
+                tenantIdForFallback // Use tenantId from request for fallback
+            );
 
             // Set subject and body HTML
             recipient.setSubject(emailContent.get("subject"));

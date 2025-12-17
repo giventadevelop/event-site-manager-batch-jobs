@@ -87,11 +87,12 @@ public class EmailBatchReader implements ItemReader<EmailRecipient> {
             }
 
             // Create EmailRecipient objects for each email
+            // Use tenantId from request (not template.getTenantId()) to ensure correct tenant context
             List<EmailRecipient> recipients = recipientEmails.stream()
                 .map(email -> EmailRecipient.builder()
                     .email(email)
                     .templateId(template.getId())
-                    .tenantId(template.getTenantId())
+                    .tenantId(tenantId) // Use tenantId from request for fallback lookups
                     .eventId(template.getEventId())
                     .fromEmail(template.getFromEmail())
                     .promotionCode(template.getPromotionCode())

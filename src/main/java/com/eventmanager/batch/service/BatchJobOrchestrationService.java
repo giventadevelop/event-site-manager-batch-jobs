@@ -6,6 +6,7 @@ import com.eventmanager.batch.job.email.processor.EmailBatchProcessor;
 import com.eventmanager.batch.job.email.reader.EmailBatchReader;
 import com.eventmanager.batch.job.subscription.processor.SubscriptionRenewalProcessor;
 import com.eventmanager.batch.job.subscription.reader.SubscriptionRenewalReader;
+import com.eventmanager.batch.service.EmailContentBuilderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -41,6 +42,7 @@ public class BatchJobOrchestrationService {
     private final EmailBatchReader emailBatchReader;
     private final EmailBatchProcessor emailBatchProcessor;
     private final BatchJobExecutionService batchJobExecutionService;
+    private final EmailContentBuilderService emailContentBuilderService;
 
     @Value("${batch.subscription-renewal.batch-size:100}")
     private int defaultBatchSize;
@@ -54,12 +56,14 @@ public class BatchJobOrchestrationService {
     @Value("${batch.email.max-emails:10000}")
     private int defaultMaxEmails;
 
+    @Value("${batch.email.header-footer-wait-time-seconds:30}")
+    private int headerFooterWaitTimeSeconds;
+
     /**
      * Run subscription renewal batch job.
      */
-    public BatchJobResponse runSubscriptionRenewalJob(String tenantId, Integer batchSize, Integer maxSubscriptions, String stripeSubscriptionId) {
-        log.info("Starting subscription renewal batch job for tenant: {}, stripeSubscriptionId: {}",
-            tenantId, stripeSubscriptionId);
+    public BatchJobResponse runSubscriptionRenewalJob(String tenantId, Integer batchSize, Integer maxSubscriptions) {
+        log.info("Starting subscription renewal batch job for tenant: {}", tenantId);
 
         // Create job execution record
         BatchJobExecution execution = batchJobExecutionService.createJobExecution(
@@ -67,10 +71,9 @@ public class BatchJobOrchestrationService {
             "SUBSCRIPTION_RENEWAL",
             tenantId,
             "API",
-            String.format("{\"tenantId\":\"%s\",\"batchSize\":%d,\"maxSubscriptions\":%d,\"stripeSubscriptionId\":\"%s\"}",
+            String.format("{\"tenantId\":\"%s\",\"batchSize\":%d,\"maxSubscriptions\":%d}",
                 tenantId, batchSize != null ? batchSize : defaultBatchSize,
-                maxSubscriptions != null ? maxSubscriptions : defaultMaxSubscriptions,
-                stripeSubscriptionId != null ? stripeSubscriptionId : "")
+                maxSubscriptions != null ? maxSubscriptions : defaultMaxSubscriptions)
         );
 
         try {
@@ -78,32 +81,14 @@ public class BatchJobOrchestrationService {
             if (tenantId != null && !tenantId.isEmpty()) {
                 subscriptionRenewalReader.setTenantId(tenantId);
                 subscriptionRenewalProcessor.setTenantId(tenantId);
-            } else {
-                // Warning: tenantId is null - this will process subscriptions for all tenants
-                // This is not recommended for multi-tenant systems
-                log.warn("tenantId is null - batch job will process subscriptions for all tenants. " +
-                        "This is not recommended for multi-tenant systems. " +
-                        "Scheduled jobs should always provide tenantId.");
-            }
-
-            // Configure reader and processor for stripeSubscriptionId if provided
-            if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
-                subscriptionRenewalReader.setStripeSubscriptionId(stripeSubscriptionId);
-                subscriptionRenewalProcessor.setStripeSubscriptionId(stripeSubscriptionId);
             }
 
             // Build job parameters
-            JobParametersBuilder jobParametersBuilder = new JobParametersBuilder()
+            JobParameters jobParameters = new JobParametersBuilder()
                 .addString("jobId", UUID.randomUUID().toString())
                 .addString("tenantId", tenantId != null ? tenantId : "ALL")
-                .addLong("timestamp", System.currentTimeMillis());
-
-            // Add stripeSubscriptionId to job parameters if provided
-            if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
-                jobParametersBuilder.addString("stripeSubscriptionId", stripeSubscriptionId);
-            }
-
-            JobParameters jobParameters = jobParametersBuilder.toJobParameters();
+                .addLong("timestamp", System.currentTimeMillis())
+                .toJobParameters();
 
             // Launch job asynchronously
             jobLauncher.run(subscriptionRenewalJob, jobParameters);
@@ -177,6 +162,19 @@ public class BatchJobOrchestrationService {
         );
 
         try {
+            // Pre-fetch and ensure header/footer are ready before starting batch processing
+            log.info("Pre-fetching header and footer for tenant: {} before starting email batch job", tenantId);
+            boolean headerFooterReady = emailContentBuilderService.ensureHeaderAndFooterReady(
+                tenantId,
+                headerFooterWaitTimeSeconds
+            );
+
+            if (!headerFooterReady) {
+                log.warn("Header and/or footer may not be ready for tenant: {}, but proceeding with batch job", tenantId);
+            } else {
+                log.info("Header and footer are ready for tenant: {}, starting email batch job", tenantId);
+            }
+
             // Initialize reader and processor
             int finalBatchSize = batchSize != null ? batchSize : defaultEmailBatchSize;
             int finalMaxEmails = maxEmails != null ? maxEmails : defaultMaxEmails;

@@ -1,14 +1,11 @@
 package com.eventmanager.batch.scheduler;
 
-import com.eventmanager.batch.repository.TenantSettingsRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * Scheduler for running batch jobs on a cron schedule.
@@ -20,7 +17,6 @@ import java.util.List;
 public class BatchJobScheduler {
 
     private final BatchJobOrchestrationService batchJobOrchestrationService;
-    private final TenantSettingsRepository tenantSettingsRepository;
 
     @Value("${batch.subscription-renewal.enabled:true}")
     private boolean subscriptionRenewalEnabled;
@@ -28,16 +24,9 @@ public class BatchJobScheduler {
     @Value("${batch.email.enabled:true}")
     private boolean emailBatchEnabled;
 
-    @Value("${batch.subscription-renewal.batch-size:100}")
-    private int defaultBatchSize;
-
-    @Value("${batch.subscription-renewal.max-subscriptions:10000}")
-    private int defaultMaxSubscriptions;
-
     /**
      * Scheduled subscription renewal job.
      * Runs every 6 hours by default (configurable via cron expression).
-     * Processes all tenants by querying tenant_settings table and triggering batch job for each tenant separately.
      */
     @Scheduled(cron = "${batch.subscription-renewal.schedule-cron:0 0 */6 * * *}")
     public void scheduledSubscriptionRenewal() {
@@ -47,53 +36,8 @@ public class BatchJobScheduler {
         }
 
         try {
-            log.info("Starting scheduled subscription renewal batch job for all tenants");
-
-            // Query all unique tenant IDs from tenant_settings table
-            List<String> tenantIds = tenantSettingsRepository.findAllDistinctTenantIds();
-            log.info("Found {} tenants to process", tenantIds.size());
-
-            if (tenantIds.isEmpty()) {
-                log.warn("No tenants found in tenant_settings table, skipping batch job");
-                return;
-            }
-
-            // Process each tenant separately
-            int successCount = 0;
-            int failureCount = 0;
-
-            for (String tenantId : tenantIds) {
-                try {
-                    log.info("Processing tenant: {}", tenantId);
-
-                    // Trigger batch job for this specific tenant
-                    batchJobOrchestrationService.runSubscriptionRenewalJob(
-                        tenantId,
-                        defaultBatchSize,
-                        defaultMaxSubscriptions,
-                        null // No stripeSubscriptionId for scheduled jobs
-                    );
-
-                    successCount++;
-                    log.info("Batch job submitted successfully for tenant: {}", tenantId);
-
-                    // Rate limiting between tenants (optional - 1 second delay)
-                    Thread.sleep(1000);
-
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.error("Interrupted while processing tenants", e);
-                    break;
-                } catch (Exception e) {
-                    failureCount++;
-                    log.error("Failed to process tenant {}: {}", tenantId, e.getMessage(), e);
-                    // Continue with next tenant even if one fails
-                }
-            }
-
-            log.info("Completed scheduled subscription renewal batch job. " +
-                    "Success: {}, Failures: {}, Total: {}", successCount, failureCount, tenantIds.size());
-
+            log.info("Starting scheduled subscription renewal batch job");
+            batchJobOrchestrationService.runSubscriptionRenewalJob(null, null, null);
         } catch (Exception e) {
             log.error("Failed to execute scheduled subscription renewal job: {}", e.getMessage(), e);
         }

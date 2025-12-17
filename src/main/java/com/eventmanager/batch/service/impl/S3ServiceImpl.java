@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of S3Service for downloading HTML files.
@@ -86,6 +87,64 @@ public class S3ServiceImpl implements S3Service {
         }
     }
 
+    @Override
+    public String downloadHtmlFromUrlWithRetry(String url, int maxRetries, long initialDelayMs) {
+        if (url == null || url.isEmpty()) {
+            log.debug("URL is null or empty, returning empty string");
+            return "";
+        }
+
+        int attempt = 0;
+        long delay = initialDelayMs;
+
+        while (attempt <= maxRetries) {
+            try {
+                String result = downloadHtmlFromUrl(url);
+                if (result != null && !result.isEmpty()) {
+                    if (attempt > 0) {
+                        log.info("Successfully downloaded HTML from S3 after {} retries: {}", attempt, url);
+                    }
+                    return result;
+                }
+
+                // If result is empty and we have retries left, wait and retry
+                if (attempt < maxRetries) {
+                    log.debug("Download returned empty, retrying in {}ms (attempt {}/{})", delay, attempt + 1, maxRetries);
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Retry wait interrupted for URL: {}", url);
+                        return "";
+                    }
+                    // Exponential backoff: double the delay for next retry
+                    delay *= 2;
+                }
+            } catch (Exception e) {
+                if (attempt < maxRetries) {
+                    log.warn("Download attempt {} failed for URL {}: {}, retrying in {}ms",
+                        attempt + 1, url, e.getMessage(), delay);
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Retry wait interrupted for URL: {}", url);
+                        return "";
+                    }
+                    delay *= 2;
+                } else {
+                    log.error("Failed to download HTML from S3 URL {} after {} attempts: {}",
+                        url, maxRetries + 1, e.getMessage());
+                }
+            }
+            attempt++;
+        }
+
+        log.warn("Failed to download HTML from S3 URL {} after {} attempts, returning empty string",
+            url, maxRetries + 1);
+        return "";
+    }
+
     private String extractS3KeyFromUrl(String url) {
         if (url.startsWith("s3://")) {
             // s3://bucket-name/key
@@ -96,9 +155,23 @@ public class S3ServiceImpl implements S3Service {
             }
         } else if (url.contains("amazonaws.com")) {
             // https://bucket-name.s3.region.amazonaws.com/key
-            int lastSlash = url.lastIndexOf('/');
-            if (lastSlash > 0 && lastSlash < url.length() - 1) {
-                return url.substring(lastSlash + 1);
+            // or https://bucket-name.s3-region.amazonaws.com/key
+            try {
+                java.net.URL urlObj = new java.net.URL(url);
+                String path = urlObj.getPath();
+                // Remove leading slash if present
+                return path.startsWith("/") ? path.substring(1) : path;
+            } catch (Exception e) {
+                log.debug("Failed to parse URL, trying fallback: {}", url);
+                // Fallback: find the path after amazonaws.com
+                int amazonawsIndex = url.indexOf("amazonaws.com");
+                if (amazonawsIndex > 0) {
+                    String afterAmazonaws = url.substring(amazonawsIndex + "amazonaws.com".length());
+                    int firstSlash = afterAmazonaws.indexOf('/');
+                    if (firstSlash >= 0 && firstSlash < afterAmazonaws.length() - 1) {
+                        return afterAmazonaws.substring(firstSlash + 1);
+                    }
+                }
             }
         } else if (url.contains("/")) {
             // Assume it's a relative path or key

@@ -16,7 +16,6 @@ public class BatchJobRequest {
     private List<String> recipientEmails; // Optional: if not provided, will be fetched based on template
     private Long userId; // User ID who triggered the job (for logging)
     private String recipientType; // Optional: "EVENT_ATTENDEES" or "SUBSCRIBED_MEMBERS". If not provided, inferred from template.eventId
-    private String stripeSubscriptionId; // Optional - if provided, process only this subscription
 }
 
 

@@ -24,6 +24,9 @@ public class TenantSettings implements Serializable {
     @Column(name = "tenant_id", length = 255, nullable = false, unique = true)
     private String tenantId;
 
+    @Column(name = "email_header_image_url", length = 2048)
+    private String emailHeaderImageUrl;
+
     @Column(name = "email_footer_html_url", length = 2048)
     private String emailFooterHtmlUrl;
 
