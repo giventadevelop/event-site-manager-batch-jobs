@@ -2,16 +2,16 @@ package com.eventmanager.batch.service;
 
 import com.eventmanager.batch.domain.PromotionEmailTemplate;
 import com.eventmanager.batch.domain.TenantSettings;
+import com.eventmanager.batch.dto.ContactFormEmailJobRequest;
 import com.eventmanager.batch.repository.TenantSettingsRepository;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -25,13 +25,7 @@ public class EmailContentBuilderService {
 
     private final S3Service s3Service;
     private final TenantSettingsRepository tenantSettingsRepository;
-
-    // Cache for tenant footer HTML (per tenant, expires after 1 hour)
-    private final Cache<String, String> footerHtmlCache = CacheBuilder
-        .newBuilder()
-        .maximumSize(1000)
-        .expireAfterWrite(1, TimeUnit.HOURS)
-        .build();
+    private final CacheManager cacheManager;
 
     /**
      * Build email content from template.
@@ -152,7 +146,7 @@ public class EmailContentBuilderService {
      * @param tenantId the tenant ID
      * @return the header image URL, or empty string if not available
      */
-    private String getTenantEmailHeaderImageUrl(String tenantId) {
+    public String getTenantEmailHeaderImageUrl(String tenantId) {
         if (tenantId == null || tenantId.isEmpty()) {
             log.debug("Tenant ID is null or empty, skipping header image");
             return "";
@@ -188,7 +182,7 @@ public class EmailContentBuilderService {
      * @param tenantId the tenant ID
      * @return the footer HTML with logo URL replaced, or empty string if not available
      */
-    private String getTenantEmailFooterHtml(String tenantId) {
+    public String getTenantEmailFooterHtml(String tenantId) {
         if (tenantId == null || tenantId.isEmpty()) {
             log.debug("Tenant ID is null or empty, skipping tenant footer HTML");
             return "";
@@ -211,8 +205,11 @@ public class EmailContentBuilderService {
                     // when logo changes, we get fresh footer HTML
                     String cacheKey = "footer:" + tenantId + "|" + (logoImageUrl != null ? logoImageUrl : "");
 
-                    // Check cache first
-                    String cachedFooterHtml = footerHtmlCache.getIfPresent(cacheKey);
+                    Cache cache = cacheManager.getCache("tenantFooterHtmlCache");
+                    String cachedFooterHtml = null;
+                    if (cache != null) {
+                        cachedFooterHtml = cache.get(cacheKey, String.class);
+                    }
                     if (cachedFooterHtml != null) {
                         log.debug("Cache hit for footer HTML for tenant: {}", tenantId);
                         return cachedFooterHtml;
@@ -238,8 +235,10 @@ public class EmailContentBuilderService {
                     }
 
                     // Cache the processed footer HTML
-                    footerHtmlCache.put(cacheKey, footerHtml);
-                    log.debug("Cached footer HTML for tenant: {}", tenantId);
+                    if (cache != null) {
+                        cache.put(cacheKey, footerHtml);
+                        log.debug("Cached footer HTML for tenant: {}", tenantId);
+                    }
 
                     return footerHtml;
                 })
@@ -251,6 +250,112 @@ public class EmailContentBuilderService {
             log.error("Error getting tenant email footer HTML for tenant {}: {}", tenantId, e.getMessage(), e);
             return "";
         }
+    }
+
+    /**
+     * Build HTML body for the main contact form email using tenant branding.
+     */
+    public String buildContactEmailBody(ContactFormEmailJobRequest request) {
+        String tenantId = request.getTenantId();
+
+        StringBuilder fullHtml = new StringBuilder();
+        fullHtml.append("<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>");
+
+        // Header image
+        String headerImageUrl = getTenantEmailHeaderImageUrl(tenantId);
+        if (headerImageUrl != null && !headerImageUrl.isEmpty()) {
+            fullHtml.append("<div style='text-align: center; margin-bottom: 20px;'>")
+                .append("<img src='")
+                .append(headerImageUrl)
+                .append("' alt='Header' style='max-width: 100%; height: auto;' />")
+                .append("</div>");
+        }
+
+        // Body content
+        fullHtml.append("<div>");
+        fullHtml.append("<p><strong>New contact form submission</strong></p>");
+        fullHtml.append("<p><strong>Name:</strong> ")
+            .append(escapeHtml(request.getFirstName()))
+            .append(" ")
+            .append(escapeHtml(request.getLastName()))
+            .append("</p>");
+        fullHtml.append("<p><strong>Email:</strong> ")
+            .append(escapeHtml(request.getFromEmail()))
+            .append("</p>");
+        fullHtml.append("<p><strong>Message:</strong><br/>")
+            .append(escapeHtml(request.getMessageBody()).replace("\n", "<br/>"))
+            .append("</p>");
+        fullHtml.append("</div>");
+
+        // Footer HTML
+        String footerHtml = getTenantEmailFooterHtml(tenantId);
+        if (footerHtml != null && !footerHtml.isEmpty()) {
+            fullHtml.append("<div>").append(footerHtml).append("</div>");
+        }
+
+        fullHtml.append("</body></html>");
+        return fullHtml.toString();
+    }
+
+    /**
+     * Build HTML body for the visitor confirmation email using tenant branding.
+     */
+    public String buildContactConfirmationEmailBody(ContactFormEmailJobRequest request) {
+        String tenantId = request.getTenantId();
+
+        StringBuilder fullHtml = new StringBuilder();
+        fullHtml.append("<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>");
+
+        // Header image
+        String headerImageUrl = getTenantEmailHeaderImageUrl(tenantId);
+        if (headerImageUrl != null && !headerImageUrl.isEmpty()) {
+            fullHtml.append("<div style='text-align: center; margin-bottom: 20px;'>")
+                .append("<img src='")
+                .append(headerImageUrl)
+                .append("' alt='Header' style='max-width: 100%; height: auto;' />")
+                .append("</div>");
+        }
+
+        // Body content
+        fullHtml.append("<div>");
+        fullHtml.append("<p>Dear ")
+            .append(escapeHtml(request.getFirstName()))
+            .append(" ")
+            .append(escapeHtml(request.getLastName()))
+            .append(",</p>");
+        fullHtml.append("<p>We have received your message and will get back to you as soon as possible.</p>");
+        fullHtml.append("<p><strong>Your message details:</strong></p>");
+        fullHtml.append("<p><strong>Email:</strong> ")
+            .append(escapeHtml(request.getFromEmail()))
+            .append("</p>");
+        fullHtml.append("<p><strong>Message:</strong><br/>")
+            .append(escapeHtml(request.getMessageBody()).replace("\n", "<br/>"))
+            .append("</p>");
+        fullHtml.append("</div>");
+
+        // Footer HTML
+        String footerHtml = getTenantEmailFooterHtml(tenantId);
+        if (footerHtml != null && !footerHtml.isEmpty()) {
+            fullHtml.append("<div>").append(footerHtml).append("</div>");
+        }
+
+        fullHtml.append("</body></html>");
+        return fullHtml.toString();
+    }
+
+    /**
+     * Basic HTML escaping for user-provided content.
+     */
+    private String escapeHtml(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
     }
 
     /**
@@ -311,7 +416,10 @@ public class EmailContentBuilderService {
 
                             // Cache the processed footer HTML
                             String cacheKey = "footer:" + tenantId + "|" + (logoImageUrl != null ? logoImageUrl : "");
-                            footerHtmlCache.put(cacheKey, footerHtml);
+                            Cache cache = cacheManager.getCache("tenantFooterHtmlCache");
+                            if (cache != null) {
+                                cache.put(cacheKey, footerHtml);
+                            }
                             footerReady.set(true);
                             log.info("Successfully pre-fetched and cached footer HTML for tenant: {}", tenantId);
                         } else {

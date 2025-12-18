@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Backend Prompt: Move Contact Form Email Sending to Batch Job Service</title>
+</head>
+<body>
+<h2>Backend Prompt: Move <code>/api/contact-form-email/send</code> Email Sending to Event Site Manager Batch Jobs</h2>
+
+<h3>1. Context</h3>
+<p>
+    You are working on the <strong>Event Site Manager Batch Jobs</strong> project located at
+    <code>E:\project_workspace\event-site-manager-batch-jobs</code>. This project already receives batch
+    email job requests from the main backend Spring Boot application
+    (<code>malayalees-us-site-boot</code>) and processes them asynchronously via REST APIs.
+</p>
+<p>
+    We now want to move the <strong>actual email sending</strong> for the contact form endpoint
+    <code>/api/contact-form-email/send</code> into this batch job project, so that:
+</p>
+<ul>
+    <li>The main backend only <strong>submits a job</strong> to the batch job service.</li>
+    <li>The batch job service <strong>sends the contact form email asynchronously</strong>.</li>
+    <li>The batch job service reuses the same <strong>tenant branding (header/footer)</strong> and
+        <strong>Caffeine/Guava caching</strong> patterns used for promotion/bulk emails.</li>
+</ul>
+
+<h3>2. Current Behavior in <code>malayalees-us-site-boot</code></h3>
+
+<h4>2.1 REST Endpoint</h4>
+<p>
+    The current endpoint is implemented in <code>ContactFormResource</code>:
+</p>
+<ul>
+    <li>Path: <code>POST /api/contact-form-email/send</code></li>
+    <li>DTO: <code>ContactFormDTO</code> (fields: <code>firstName</code>, <code>lastName</code>,
+        <code>messageBody</code>, <code>fromEmail</code>, <code>toEmail</code>)</li>
+    <li>Tenant context: resolved from <code>X-Tenant-ID</code> header / <code>TenantContext</code></li>
+</ul>
+
+<h4>2.2 Service Logic</h4>
+<p>
+    The implementation is in <code>ContactFormServiceImpl</code>. Key behaviors:
+</p>
+<ul>
+    <li>Builds a subject like <code>Contact Form Submission from &lt;firstName&gt; &lt;lastName&gt;</code>.</li>
+    <li>Builds an HTML body using <code>buildEmailBody(ContactFormDTO, tenantId)</code>, which:
+        <ul>
+            <li>Adds tenant header image from <code>TenantSettings.emailHeaderImageUrl</code> (via
+                <code>getTenantEmailHeaderImageUrl</code>).</li>
+            <li>Adds tenant footer HTML from S3 via <code>TenantSettings.emailFooterHtmlUrl</code> and
+                <code>TenantSettings.logoImageUrl</code> (via
+                <code>getTenantEmailFooterHtml</code>), with caching.</li>
+        </ul>
+    </li>
+    <li>Resolves the <strong>FROM</strong> address using <code>TenantEmailAddress</code>:
+        <ul>
+            <li>Prefers <code>email_type = CONTACT</code> for the current tenant.</li>
+            <li>Falls back to default/active/any active email address for the tenant.</li>
+            <li>Caches the resolved FROM address per tenant.</li>
+        </ul>
+    </li>
+    <li>Sets <strong>Reply-To</strong> to the visitor’s email (<code>contactFormDTO.fromEmail</code>).</li>
+    <li>Sends:
+        <ul>
+            <li>Main email: FROM = tenant FROM, TO = <code>contactFormDTO.toEmail</code>.</li>
+            <li>Copy email: TO = tenant <code>copy_to_email_address</code> (if configured on
+                <code>TenantEmailAddress</code>).</li>
+            <li>Confirmation email: TO = visitor’s email (<code>contactFormDTO.fromEmail</code>),
+                reusing tenant branding.</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>2.3 Existing Batch Job Integration (Reference)</h4>
+<p>
+    Promotion/bulk emails already use the batch jobs microservice via
+    <code>BatchJobEmailService</code> and <code>BatchJobEmailServiceImpl</code>:
+</p>
+<ul>
+    <li>Batch job endpoint (in batch job project): <code>POST /api/batch-jobs/email</code></li>
+    <li>Client in backend:
+        <ul>
+            <li><code>BatchJobEmailServiceImpl</code> uses <code>WebClient</code> with base URL from
+                <code>BatchJobProperties.url</code>.</li>
+            <li>Method <code>triggerEmailBatch(...)</code> sends a JSON body
+                (<code>BatchJobEmailRequest</code>) to <code>/api/batch-jobs/email</code> and gets a
+                <code>BatchJobEmailResponse</code>.
+            </li>
+        </ul>
+    </li>
+    <li><code>PromotionEmailServiceImpl</code> calls
+        <code>batchJobEmailService.triggerEmailBatch(...)</code> instead of sending emails directly.
+    </li>
+</ul>
+
+<h3>3. New Feature: Contact Form Email Batch Job</h3>
+<p>
+    Implement a new <strong>asynchronous batch job API</strong> in the Event Site Manager Batch Jobs
+    project which will handle contact form emails. Then the main backend will call this new API
+    instead of sending emails directly.
+</p>
+
+<h4>3.1 New REST API in Batch Job Project</h4>
+<p>
+    Add a new controller and endpoint in the batch job project:
+</p>
+<ul>
+    <li>Path: <code>POST /api/batch-jobs/contact-form-email</code></li>
+    <li>Purpose: Accept a <strong>single contact form email job</strong>, store/trigger it to be
+        processed asynchronously, and immediately return a job response.</li>
+    <li>Behavior:
+        <ul>
+            <li>Validate required fields (see DTO below).</li>
+            <li>Wrap the contact form send operation in a job/execution record (if you use
+                <code>BatchJobExecution</code> / <code>BatchJobExecutionDTO</code> patterns).</li>
+            <li>Enqueue or directly trigger an async task that:
+                <ul>
+                    <li>Builds the email HTML body with tenant header/footer (same pattern as promotion
+                        emails and <code>ContactFormServiceImpl</code>).</li>
+                    <li>Resolves FROM and COPY-TO addresses from <code>TenantEmailAddress</code>.</li>
+                    <li>Sends:
+                        <ul>
+                            <li>Main email to the tenant <code>toEmail</code>.</li>
+                            <li>Copy email to configured <code>copy_to_email_address</code>.</li>
+                            <li>Confirmation email to visitor’s <code>fromEmail</code>.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+</ul>
+
+<h4>3.2 DTOs to Implement in Batch Job Project</h4>
+
+<h5>3.2.1 <code>ContactFormEmailJobRequest</code> DTO</h5>
+<p>
+    Create a new DTO in the batch job project representing a single contact form job:
+</p>
+<ul>
+    <li><code>String tenantId</code> (required)</li>
+    <li><code>String firstName</code> (required)</li>
+    <li><code>String lastName</code> (required)</li>
+    <li><code>String messageBody</code> (required)</li>
+    <li><code>String fromEmail</code> (visitor email, required)</li>
+    <li><code>String toEmail</code> (tenant destination email, required)</li>
+    <li><code>Long submittedAtEpochMillis</code> (optional, for logging)</li>
+    <li><code>Long userId</code> (optional, system user or admin ID if needed for auditing)</li>
+</ul>
+<p>
+    Apply validation annotations similar to <code>ContactFormDTO</code> in the backend:
+</p>
+<ul>
+    <li><code>@NotNull</code>, <code>@NotBlank</code> as appropriate</li>
+    <li><code>@Email</code> for email fields</li>
+    <li><code>@Size(max = 255)</code> for short strings; longer limit for <code>messageBody</code>
+        if needed.</li>
+</ul>
+
+<h5>3.2.2 <code>ContactFormEmailJobResponse</code> DTO</h5>
+<p>
+    Mirror the existing <code>BatchJobEmailResponse</code> pattern:
+</p>
+<ul>
+    <li><code>Boolean success</code></li>
+    <li><code>String message</code></li>
+    <li><code>Long jobExecutionId</code> (if you store executions)</li>
+    <li><code>Long processedCount</code> (1 for a single contact form email)</li>
+    <li><code>Long successCount</code>, <code>Long failedCount</code></li>
+</ul>
+
+<h4>3.3 Service Layer in Batch Job Project</h4>
+<p>
+    Implement a dedicated service class, e.g. <code>ContactFormEmailJobService</code>, with a method:
+</p>
+<pre><code>ContactFormEmailJobResponse triggerContactFormEmailJob(ContactFormEmailJobRequest request)</code></pre>
+<p>Responsibilities:</p>
+<ul>
+    <li>Validate the request.</li>
+    <li>Persist a job/execution record if your project uses <code>BatchJobExecution</code> for
+        tracking.</li>
+    <li>Run/be triggered asynchronously (e.g. via <code>@Async</code>, scheduler, or an internal job
+        queue).</li>
+    <li>In the async handler:
+        <ul>
+            <li>Resolve <code>tenantId</code> from the request (do <strong>not</strong> infer it from
+                template or any other source).</li>
+            <li>Load tenant-level settings via <code>TenantSettingsRepository</code>.</li>
+            <li>Use the <strong>same header/footer fallback and caching pattern</strong> already
+                described in
+                <code>documentation/batch_job_integration/TENANT_EMAIL_HEADER_FOOTER_FALLBACK_IMPLEMENTATION_PROMPT.md</code>.
+            </li>
+            <li>Resolve FROM and COPY-TO addresses via <code>TenantEmailAddressRepository</code>
+                (see next section).</li>
+            <li>Call your internal email sending service (SES client or similar) to send:
+                <ul>
+                    <li>Main email (tenant destination).</li>
+                    <li>Copy email (copy-to address).</li>
+                    <li>Confirmation email (visitor address).</li>
+                </ul>
+            </li>
+            <li>Update job execution status and counts.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>4. Tenant Email Address and Copy-To Logic in Batch Job Project</h3>
+
+<h4>4.1 Entity and DTO</h4>
+<p>
+    Ensure the batch job project has a <code>TenantEmailAddress</code> entity and DTO compatible with
+    the backend:
+</p>
+<ul>
+    <li>Fields: <code>tenantId</code>, <code>emailAddress</code>, <code>emailType</code>
+        (enum: includes <code>CONTACT</code>), <code>displayName</code>, <code>isActive</code>,
+        <code>isDefault</code>, <code>copyToEmailAddress</code>, <code>description</code>,
+        <code>createdAt</code>, <code>updatedAt</code>.</li>
+    <li>Repository methods (or equivalents) to support:
+        <ul>
+            <li><code>findByTenantIdAndEmailType(tenantId, TenantEmailType.CONTACT)</code></li>
+            <li><code>findByTenantIdAndIsDefaultTrue(tenantId)</code></li>
+            <li><code>findByTenantIdAndIsActive(tenantId, true)</code></li>
+        </ul>
+    </li>
+</ul>
+
+<h4>4.2 FROM Address Resolution (in Batch Job Project)</h4>
+<p>
+    Implement helper methods analogous to <code>ContactFormServiceImpl</code>:
+</p>
+<ul>
+    <li><code>String resolveContactFromEmail(String tenantId)</code>:
+        <ul>
+            <li>Prefer <code>emailType = CONTACT</code>:</li>
+            <li>Among those, prefer active + default, then active, then any.</li>
+            <li>If none, fall back to <code>isDefault = true</code> (active) for tenant.</li>
+            <li>If still none, fall back to any active tenant email.</li>
+            <li>Cache per tenant using Caffeine or Guava (see section 5).</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>4.3 COPY-TO Address Resolution (in Batch Job Project)</h4>
+<p>
+    Implement:
+</p>
+<ul>
+    <li><code>String resolveContactCopyToEmail(String tenantId)</code>:
+        <ul>
+            <li>Use the same selection algorithm as <code>resolveContactFromEmail</code>, but read
+                <code>copyToEmailAddress</code> from the selected <code>TenantEmailAddress</code>
+                record.</li>
+            <li>If <code>copyToEmailAddress</code> is non-empty, use it as COPY-TO destination for
+                the contact form email.</li>
+            <li>If empty, skip copy-to sending.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>5. Header/Footer Fallback and Caching (Caffeine/Guava)</h3>
+<p>
+    Reuse the pattern defined in
+    <code>documentation/batch_job_integration/TENANT_EMAIL_HEADER_FOOTER_FALLBACK_IMPLEMENTATION_PROMPT.md</code>.
+    If the batch job project currently does <strong>not</strong> have caching for footer HTML, add it
+    using Caffeine or Guava:
+</p>
+<ul>
+    <li>Add a cache field in the relevant service class, e.g.:
+        <pre><code>private final Cache&lt;String, String&gt; footerHtmlCache = CacheBuilder
+    .newBuilder()
+    .maximumSize(1000)
+    .expireAfterWrite(1, TimeUnit.HOURS)
+    .build();</code></pre>
+    </li>
+    <li>Use a cache key including <code>tenantId</code> and <code>logoImageUrl</code>:
+        <pre><code>String cacheKey = "footer:" + tenantId + "|" + (logoImageUrl != null ? logoImageUrl : "");</code></pre>
+    </li>
+    <li>On cache miss:
+        <ul>
+            <li>Download HTML from S3 via <code>S3Service</code> using
+                <code>TenantSettings.emailFooterHtmlUrl</code>.</li>
+            <li>Replace <code>{{LOGO_URL}}</code> in the HTML with <code>logoImageUrl</code>.</li>
+            <li>Store processed HTML in the cache.</li>
+        </ul>
+    </li>
+    <li>On cache hit:
+        <ul>
+            <li>Use cached HTML directly.</li>
+        </ul>
+    </li>
+</ul>
+<p>
+    If the batch job project prefers <strong>Caffeine</strong> instead of Guava, configure a
+    <code>CacheManager</code> bean and use a named cache (e.g. <code>tenantFooterHtmlCache</code>)
+    with similar size and TTL characteristics.
+</p>
+
+<h3>6. New Contact Form Email HTML Builder in Batch Job Project</h3>
+<p>
+    Implement a method similar to <code>buildEmailBody(ContactFormDTO, tenantId)</code> from the
+    backend, but in the batch job project and using the <code>ContactFormEmailJobRequest</code>:
+</p>
+<ul>
+    <li>Add tenant header image from <code>TenantSettings.emailHeaderImageUrl</code> via
+        <code>getTenantEmailHeaderImageUrl(tenantId)</code>.</li>
+    <li>Add body with:
+        <ul>
+            <li>Visitor name (first + last).</li>
+            <li>Visitor email.</li>
+            <li>Message body (HTML-escaped).</li>
+        </ul>
+    </li>
+    <li>Add tenant footer HTML using <code>getTenantEmailFooterHtml(tenantId)</code>.</li>
+</ul>
+<p>
+    Also implement a <strong>confirmation email body builder</strong> similar to
+    <code>buildConfirmationEmailBody</code>:
+</p>
+<ul>
+    <li>Header + footer same as above.</li>
+    <li>Content: “We received your message” + echo of the user’s name, email, and message.</li>
+</ul>
+
+<h3>7. How the Main Backend Will Call This New API</h3>
+<p>
+    After this feature is implemented in the batch job project, we will modify
+    <code>malayalees-us-site-boot</code> so that:
+</p>
+<ul>
+    <li><code>ContactFormServiceImpl.sendContactFormEmail</code> will:
+        <ul>
+            <li>Stop calling <code>EmailSenderService</code> directly.</li>
+            <li>Instead, construct a <code>ContactFormEmailJobRequest</code>-like DTO and call a
+                <strong>new client service</strong> in the backend (e.g.
+                <code>BatchJobContactFormEmailService</code>) that:
+                <ul>
+                    <li>Uses <code>WebClient</code> to POST to
+                        <code>POST /api/batch-jobs/contact-form-email</code> on the batch job project
+                        (similar to <code>BatchJobEmailServiceImpl</code>).</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li>The backend will still:
+        <ul>
+            <li>Resolve <code>tenantId</code> from <code>X-Tenant-ID</code> / <code>TenantContext</code>.</li>
+            <li>Validate <code>ContactFormDTO</code> fields.</li>
+            <li>Return a small success/failure JSON with job info (e.g. jobExecutionId) to the
+                frontend.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>8. Dependencies for Batch Job Project</h3>
+<p>
+    Ensure the batch job project has (or add if missing):
+</p>
+<ul>
+    <li>Caching:
+        <ul>
+            <li>Guava:
+                <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.google.guava&lt;/groupId&gt;
+    &lt;artifactId&gt;guava&lt;/artifactId&gt;
+    &lt;version&gt;32.1.3-jre&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+            </li>
+            <li>Or Caffeine:
+                <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;com.github.ben-manes.caffeine&lt;/groupId&gt;
+    &lt;artifactId&gt;caffeine&lt;/artifactId&gt;
+    &lt;version&gt;3.1.8&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+            </li>
+        </ul>
+    </li>
+    <li>Access to:
+        <ul>
+            <li><code>TenantSettingsRepository</code></li>
+            <li><code>TenantEmailAddressRepository</code></li>
+            <li><code>S3Service</code> (or equivalent) for footer HTML download.</li>
+            <li>Existing email sending service / SES client.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>9. Testing Checklist</h3>
+<ul>
+    <li>✅ New endpoint <code>POST /api/batch-jobs/contact-form-email</code> exists and returns a JSON
+        response.</li>
+    <li>✅ Sending a contact form from the frontend:
+        <ul>
+            <li>Results in a job being created in the batch job project.</li>
+            <li>Asynchronously sends the main, copy-to, and confirmation emails.</li>
+        </ul>
+    </li>
+    <li>✅ Tenant header and footer appear correctly in all three emails.</li>
+    <li>✅ FROM and COPY-TO addresses are resolved from <code>TenantEmailAddress</code> as designed.</li>
+    <li>✅ S3 footer HTML is cached, with logo replacement applied.</li>
+    <li>✅ Failures in actual email sending are logged and recorded but do not crash the REST API.</li>
+    <li>✅ If <code>copy_to_email_address</code> is not configured, system still works (no copy email
+        sent).</li>
+</ul>
+
+<h3>10. Success Criteria</h3>
+<ul>
+    <li>All contact form emails are sent exclusively via the Event Site Manager Batch Jobs project.</li>
+    <li>The main backend just triggers a job and returns quickly to the frontend.</li>
+    <li>Tenant header/footer branding is consistent with promotion/bulk emails.</li>
+    <li>FROM and COPY-TO behavior matches the current backend implementation semantics.</li>
+    <li>Caching significantly reduces repeated S3 footer downloads.</li>
+</ul>
+
+</body>
+</html>
+
+

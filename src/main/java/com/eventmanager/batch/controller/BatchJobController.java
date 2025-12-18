@@ -2,7 +2,10 @@ package com.eventmanager.batch.controller;
 
 import com.eventmanager.batch.dto.BatchJobRequest;
 import com.eventmanager.batch.dto.BatchJobResponse;
+import com.eventmanager.batch.dto.ContactFormEmailJobRequest;
+import com.eventmanager.batch.dto.ContactFormEmailJobResponse;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
+import com.eventmanager.batch.service.ContactFormEmailJobService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class BatchJobController {
 
     private final BatchJobOrchestrationService batchJobOrchestrationService;
+    private final ContactFormEmailJobService contactFormEmailJobService;
 
     /**
      * Trigger subscription renewal batch job.
@@ -72,6 +76,32 @@ public class BatchJobController {
                 .body(BatchJobResponse.builder()
                     .success(false)
                     .message("Failed to trigger job: " + e.getMessage())
+                    .build());
+        }
+    }
+
+    /**
+     * Trigger contact form email job.
+     * This accepts a single contact form submission and delegates asynchronous
+     * email sending (main, copy-to, and confirmation) to the batch job service.
+     */
+    @PostMapping("/contact-form-email")
+    public ResponseEntity<ContactFormEmailJobResponse> triggerContactFormEmailJob(
+        @RequestBody ContactFormEmailJobRequest request
+    ) {
+        try {
+            log.info("Received contact form email job request for tenant: {}", request.getTenantId());
+            ContactFormEmailJobResponse response = contactFormEmailJobService.triggerContactFormEmailJob(request);
+            HttpStatus status = Boolean.TRUE.equals(response.getSuccess())
+                ? HttpStatus.OK
+                : HttpStatus.BAD_REQUEST;
+            return ResponseEntity.status(status).body(response);
+        } catch (Exception e) {
+            log.error("Failed to trigger contact form email job: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ContactFormEmailJobResponse.builder()
+                    .success(false)
+                    .message("Failed to trigger contact form email job: " + e.getMessage())
                     .build());
         }
     }

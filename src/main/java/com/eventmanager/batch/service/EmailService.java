@@ -27,9 +27,10 @@ import java.util.Map;
 public class EmailService {
 
     private final SesClient sesClient;
-    private final String fromAddress;
     private final RateLimiter sesRateLimiter;
     private final CircuitBreaker sesCircuitBreaker;
+
+    private final String fromAddress;
 
     public EmailService(
         @Value("${aws.s3.access-key}") String accessKey,
@@ -61,9 +62,23 @@ public class EmailService {
     }
 
     /**
-     * Send a single email.
+     * Send a single email using the default configured FROM address.
      */
     public void sendEmail(String to, String subject, String body, boolean isHtml) {
+        sendEmail(null, null, to, subject, body, isHtml);
+    }
+
+    /**
+     * Send a single email with explicit FROM and optional Reply-To.
+     *
+     * @param from     the FROM address (if null, the default configured address is used)
+     * @param replyTo  the Reply-To address (optional)
+     * @param to       the destination email address
+     * @param subject  the email subject
+     * @param body     the email body
+     * @param isHtml   whether the body is HTML
+     */
+    public void sendEmail(String from, String replyTo, String to, String subject, String body, boolean isHtml) {
         if (sesCircuitBreaker.getState() == CircuitBreaker.State.OPEN) {
             log.warn("SES circuit breaker is OPEN, rejecting email send request");
             throw new RuntimeException("Email service is temporarily unavailable (circuit breaker open)");
@@ -85,7 +100,8 @@ public class EmailService {
                     .subject(Content.builder().data(subject).build())
                     .body(emailBody)
                     .build())
-                .source(fromAddress)
+                .source(from != null && !from.isEmpty() ? from : fromAddress)
+                .replyToAddresses(replyTo != null && !replyTo.isEmpty() ? List.of(replyTo) : null)
                 .build();
 
             SendEmailResponse response = sesCircuitBreaker.executeSupplier(() ->
@@ -160,6 +176,8 @@ public class EmailService {
         }
     }
 }
+
+
 
 
 

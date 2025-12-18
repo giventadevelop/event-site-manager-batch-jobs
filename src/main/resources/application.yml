@@ -34,6 +34,12 @@ spring:
       initialize-schema: never  # Set to 'never' since we're manually creating tables with BIGSERIAL
       table-prefix: BATCH_
 
+  cache:
+    # Use Caffeine as primary cache implementation (same pattern as main backend)
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=3600s
+
 server:
   port: ${SERVER_PORT:8081}  # Default to 8081 to avoid conflict with backend on 8080
   servlet:
@@ -51,6 +57,14 @@ management:
     export:
       prometheus:
         enabled: true
+
+# Cache TTL configuration for named caches (seconds)
+cache:
+  ttl:
+    tenantFooterHtml: 3600   # 1 hour - tenant footer HTML from S3
+    tenantEmailFrom: 3600    # 1 hour - resolved FROM email per tenant
+    tenantEmailCopyTo: 3600  # 1 hour - resolved COPY-TO email per tenant
+  maxSize: 1000
 
 # AWS Configuration
 aws:
