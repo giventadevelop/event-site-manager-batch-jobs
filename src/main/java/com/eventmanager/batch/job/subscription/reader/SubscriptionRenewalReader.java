@@ -29,6 +29,9 @@ public class SubscriptionRenewalReader implements ItemReader<MembershipSubscript
     @Value("${batch.subscription-renewal.renewal-days-ahead:7}")
     private int renewalDaysAhead;
 
+    @Value("${batch.subscription-renewal.stripe-check-extended-days:30}")
+    private int stripeCheckExtendedDays;
+
     private Iterator<MembershipSubscription> subscriptionIterator;
     private String tenantId;
     private String stripeSubscriptionId;
@@ -87,9 +90,10 @@ public class SubscriptionRenewalReader implements ItemReader<MembershipSubscript
 
             // Otherwise, load subscriptions that need renewal
             LocalDate renewalDateThreshold = LocalDate.now().plusDays(renewalDaysAhead);
-            log.debug("Loading subscriptions needing renewal before: {}, tenantId={}",
-                renewalDateThreshold, tenantId);
-            return repository.findSubscriptionsNeedingRenewal(tenantId, renewalDateThreshold);
+            LocalDate extendedDateThreshold = LocalDate.now().plusDays(stripeCheckExtendedDays);
+            log.debug("Loading subscriptions needing renewal - renewal window: {}, extended window for Stripe check: {}, tenantId={}",
+                renewalDateThreshold, extendedDateThreshold, tenantId);
+            return repository.findSubscriptionsNeedingRenewal(tenantId, renewalDateThreshold, extendedDateThreshold);
         } catch (Exception e) {
             log.error("Error loading subscriptions for tenant {}: {}", tenantId, e.getMessage(), e);
             return List.of();

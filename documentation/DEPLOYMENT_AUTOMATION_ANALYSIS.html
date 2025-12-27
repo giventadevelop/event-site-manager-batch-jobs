@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Jobs Deployment Automation Analysis & Solutions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 4px solid #9b59b6;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            border-left: 5px solid #9b59b6;
+            padding-left: 15px;
+        }
+
+        h3 {
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .error-box {
+            background-color: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border-left: 4px solid #9b59b6;
+        }
+
+        pre code {
+            background-color: transparent;
+            color: #f8f8f2;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background-color: #9b59b6;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .comparison-table {
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .comparison-table th {
+            background-color: #34495e;
+        }
+
+        .automation-level {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .level-high {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .level-medium {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .level-low {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .level-partial {
+            background-color: #2196f3;
+            color: white;
+        }
+
+        .workflow-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .workflow-step {
+            padding: 10px;
+            margin: 10px 0;
+            background: white;
+            border-left: 3px solid #9b59b6;
+            border-radius: 3px;
+        }
+
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .toc ul {
+            list-style-type: none;
+            margin-left: 0;
+        }
+
+        .toc li {
+            margin: 8px 0;
+        }
+
+        .toc a {
+            color: #9b59b6;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .diagram {
+            background-color: #f9f9f9;
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .step-number {
+            display: inline-block;
+            background-color: #9b59b6;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .command-block {
+            position: relative;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #9b59b6;
+        }
+
+        .command-text {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+        }
+
+        .copy-button {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .copy-button:hover {
+            background-color: #7d3c98;
+        }
+
+        .copy-button.copied {
+            background-color: #27ae60;
+        }
+
+        .metric-box {
+            background-color: #f8f9fa;
+            border: 2px solid #9b59b6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #9b59b6;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 1.1em;
+        }
+    </style>
+    <script>
+        function copyToClipboard(text, buttonId) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    const originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.classList.add('copied');
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('copied');
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Batch Jobs Deployment Automation Analysis & Solutions</h1>
+
+        <div class="info-box">
+            <strong>📋 Executive Summary:</strong> This document provides a comprehensive analysis of the current manual deployment process for the Event Site Manager Batch Jobs service and proposes automation solutions using GitHub Actions and AWS native services. The analysis covers automation opportunities, implementation strategies, and recommendations for achieving maximum deployment automation.
+        </div>
+
+        <div class="toc">
+            <h3>📑 Table of Contents</h3>
+            <ul>
+                <li><a href="#current-state">1. Current State Analysis</a></li>
+                <li><a href="#automation-opportunities">2. Automation Opportunities</a></li>
+                <li><a href="#github-actions">3. GitHub Actions Automation</a></li>
+                <li><a href="#aws-automation">4. AWS Native Automation</a></li>
+                <li><a href="#hybrid-approach">5. Hybrid Approach</a></li>
+                <li><a href="#comparison">6. Solution Comparison</a></li>
+                <li><a href="#recommendations">7. Recommendations</a></li>
+                <li><a href="#implementation">8. Implementation Roadmap</a></li>
+            </ul>
+        </div>
+
+        <div class="metric-box">
+            <div class="metric-label">Current Automation Level</div>
+            <div class="metric-value">15%</div>
+            <div class="metric-label">Target Automation Level</div>
+            <div class="metric-value">95%</div>
+        </div>
+
+        <h2 id="current-state">1. Current State Analysis</h2>
+
+        <h3>1.1 Manual Deployment Process</h3>
+        <p>The current deployment process requires manual execution of multiple PowerShell scripts in sequence:</p>
+
+        <div class="workflow-box">
+            <div class="workflow-step">
+                <span class="step-number">1</span>
+                <strong>Prerequisites Check</strong>
+                <ul>
+                    <li>Manual verification of VPC and RDS config files</li>
+                    <li>Manual execution of <code>check-ecr-repositories.ps1</code></li>
+                    <li>Manual creation of ECR repositories if needed</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">2</span>
+                <strong>Build & Push</strong>
+                <ul>
+                    <li>Manual execution of <code>deploy-docker-image-to-ecs-batch-jobs.ps1</code></li>
+                    <li>Manual version tagging</li>
+                    <li>Manual Maven build execution</li>
+                    <li>Manual Docker image build and push to ECR</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">3</span>
+                <strong>Infrastructure Deployment (First Time)</strong>
+                <ul>
+                    <li>Manual execution of <code>deploy-production-batch-jobs-ascii.ps1</code></li>
+                    <li>Manual parameter passing</li>
+                    <li>Manual monitoring of deployment status</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">4</span>
+                <strong>Verification</strong>
+                <ul>
+                    <li>Manual health check verification</li>
+                    <li>Manual log inspection</li>
+                    <li>Manual service status checks</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>1.2 Current Process Metrics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Current State</th>
+                    <th>Time Required</th>
+                    <th>Manual Steps</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Build & Test</strong></td>
+                    <td>Manual Maven execution</td>
+                    <td>5-8 minutes</td>
+                    <td>3-5 steps</td>
+                </tr>
+                <tr>
+                    <td><strong>Docker Build</strong></td>
+                    <td>Manual Docker build</td>
+                    <td>3-5 minutes</td>
+                    <td>2-3 steps</td>
+                </tr>
+                <tr>
+                    <td><strong>ECR Push</strong></td>
+                    <td>Manual push to ECR</td>
+                    <td>1-2 minutes</td>
+                    <td>1-2 steps</td>
+                </tr>
+                <tr>
+                    <td><strong>ECS Deployment</strong></td>
+                    <td>Manual script execution</td>
+                    <td>5-10 minutes</td>
+                    <td>4-6 steps</td>
+                </tr>
+                <tr>
+                    <td><strong>Verification</strong></td>
+                    <td>Manual checks</td>
+                    <td>2-5 minutes</td>
+                    <td>3-4 steps</td>
+                </tr>
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td><strong>Fully Manual</strong></td>
+                    <td><strong>16-30 minutes</strong></td>
+                    <td><strong>13-20 steps</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>1.3 Pain Points</h3>
+        <div class="error-box">
+            <ul>
+                <li><strong>Human Error:</strong> Manual parameter passing can lead to typos or wrong environment selection</li>
+                <li><strong>Time Consumption:</strong> 16-30 minutes per deployment requires dedicated developer time</li>
+                <li><strong>Consistency Issues:</strong> Different developers may execute steps differently</li>
+                <li><strong>No Automated Testing:</strong> Tests must be run manually before deployment</li>
+                <li><strong>No Rollback Automation:</strong> Rollbacks require manual intervention</li>
+                <li><strong>No Deployment History:</strong> Limited visibility into deployment timeline</li>
+                <li><strong>Environment Drift:</strong> Manual processes can lead to configuration drift</li>
+            </ul>
+        </div>
+
+        <h2 id="automation-opportunities">2. Automation Opportunities</h2>
+
+        <h3>2.1 Fully Automatable Steps</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Automation Level</th>
+                    <th>Current Method</th>
+                    <th>Automation Potential</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Code Build</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual Maven execution</td>
+                    <td>GitHub Actions / AWS CodeBuild</td>
+                </tr>
+                <tr>
+                    <td><strong>Unit Tests</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual test execution</td>
+                    <td>Automated test runner in CI/CD</td>
+                </tr>
+                <tr>
+                    <td><strong>Docker Build</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual Docker build</td>
+                    <td>Automated in pipeline</td>
+                </tr>
+                <tr>
+                    <td><strong>ECR Push</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual push</td>
+                    <td>Automated after successful build</td>
+                </tr>
+                <tr>
+                    <td><strong>Task Definition Update</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual script execution</td>
+                    <td>Automated via AWS SDK</td>
+                </tr>
+                <tr>
+                    <td><strong>ECS Service Update</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual script execution</td>
+                    <td>Automated via AWS SDK</td>
+                </tr>
+                <tr>
+                    <td><strong>Health Check Verification</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual verification</td>
+                    <td>Automated polling until healthy</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback on Failure</strong></td>
+                    <td><span class="automation-level level-high">100%</span></td>
+                    <td>Manual rollback</td>
+                    <td>Automated rollback trigger</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2.2 Partially Automatable Steps</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Step</th>
+                    <th>Automation Level</th>
+                    <th>Current Method</th>
+                    <th>Automation Approach</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Initial Infrastructure Setup</strong></td>
+                    <td><span class="automation-level level-partial">80%</span></td>
+                    <td>One-time manual script</td>
+                    <td>Automated with approval gate for prod</td>
+                </tr>
+                <tr>
+                    <td><strong>Version Tagging</strong></td>
+                    <td><span class="automation-level level-partial">90%</span></td>
+                    <td>Manual version selection</td>
+                    <td>Auto-generate from git tag/commit SHA</td>
+                </tr>
+                <tr>
+                    <td><strong>Configuration Validation</strong></td>
+                    <td><span class="automation-level level-partial">85%</span></td>
+                    <td>Manual file checks</td>
+                    <td>Automated validation with clear error messages</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>2.3 Automation Benefits</h3>
+        <div class="success-box">
+            <ul>
+                <li><strong>⏱️ Time Savings:</strong> Reduce deployment time from 16-30 minutes to 10-15 minutes (with parallel execution)</li>
+                <li><strong>✅ Consistency:</strong> Every deployment follows the same process</li>
+                <li><strong>🔒 Safety:</strong> Automated tests and validation prevent bad deployments</li>
+                <li><strong>📊 Visibility:</strong> Complete deployment history and logs</li>
+                <li><strong>🔄 Rollback:</strong> Automated rollback on health check failures</li>
+                <li><strong>👥 Team Efficiency:</strong> Developers can trigger deployments without deep AWS knowledge</li>
+                <li><strong>🌙 Off-Hours Deployment:</strong> Schedule deployments during low-traffic periods</li>
+            </ul>
+        </div>
+
+        <h2 id="github-actions">3. GitHub Actions Automation</h2>
+
+        <h3>3.1 GitHub Actions Overview</h3>
+        <p>GitHub Actions provides a fully integrated CI/CD solution that runs directly in your GitHub repository. It's ideal for automating the complete deployment pipeline from code commit to AWS ECS.</p>
+
+        <h3>3.2 Proposed GitHub Actions Workflow</h3>
+        <div class="diagram">
+GitHub Actions Workflow Flow:
+│
+├── Trigger: Push to branch or Pull Request
+│   ├── main → Deploy to DEV
+│   ├── release/* → Deploy to STAGE (with approval)
+│   └── tag v*.*.* → Deploy to PROD (with approval)
+│
+├── Step 1: Checkout Code
+│   └── Actions/checkout@v3
+│
+├── Step 2: Setup Java & Maven
+│   ├── actions/setup-java@v3 (Java 17)
+│   └── actions/setup-maven@v3
+│
+├── Step 3: Run Tests
+│   └── mvn test
+│
+├── Step 4: Build Application
+│   └── mvn clean package -DskipTests (if tests pass)
+│
+├── Step 5: Configure AWS Credentials
+│   └── aws-actions/configure-aws-credentials@v2
+│
+├── Step 6: Login to ECR
+│   └── aws-actions/amazon-ecr-login@v1
+│
+├── Step 7: Build & Push Docker Image
+│   ├── Build Docker image
+│   ├── Tag with: commit SHA, branch name, version (if tag)
+│   └── Push to ECR
+│
+├── Step 8: Generate Task Definition
+│   └── Use existing PowerShell script (via Docker or convert to Node.js)
+│
+├── Step 9: Register Task Definition
+│   └── aws-actions/amazon-ecs-deploy-task-definition@v1
+│
+├── Step 10: Update ECS Service
+│   └── aws-actions/amazon-ecs-deploy-task-definition@v1
+│
+└── Step 11: Verify Deployment
+    ├── Poll health check endpoint
+    ├── Check ECS service status
+    └── Rollback on failure
+        </div>
+
+        <h3>3.3 Sample GitHub Actions Workflow File</h3>
+        <div class="command-block">
+            <pre class="command-text"># .github/workflows/deploy-dev.yml
+name: Deploy to Dev
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (optional)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: event-site-manager-batch-jobs-dev
+  ECS_SERVICE: event-site-manager-dev-batch-jobs-service
+  ECS_CLUSTER: event-site-manager-dev-cluster
+  ECS_TASK_DEFINITION: event-site-manager-dev-batch-jobs
+  CONTAINER_NAME: batch-jobs
+
+jobs:
+  deploy:
+    name: Deploy to Dev Environment
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Run tests
+      run: mvn test
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Download task definition
+      run: |
+        aws ecs describe-task-definition \
+          --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+          --query taskDefinition > task-definition.json
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+    - name: Verify deployment
+      run: |
+        echo "Waiting for service to stabilize..."
+        aws ecs wait services-stable \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }}
+        echo "Deployment verified successfully!"</pre>
+            <button class="copy-button" id="copy-github-dev" onclick="copyToClipboard(this.previousElementSibling.textContent, 'copy-github-dev')">Copy Workflow</button>
+        </div>
+
+        <h3>3.4 GitHub Actions Advantages</h3>
+        <div class="success-box">
+            <ul>
+                <li><strong>✅ Free for Public Repos:</strong> 2,000 minutes/month free for private repos</li>
+                <li><strong>✅ Native Integration:</strong> Built into GitHub, no external service setup</li>
+                <li><strong>✅ Easy Configuration:</strong> YAML-based workflow files in repository</li>
+                <li><strong>✅ Version Control:</strong> Workflows are versioned with code</li>
+                <li><strong>✅ Extensive Marketplace:</strong> 10,000+ pre-built actions available</li>
+                <li><strong>✅ Multi-Environment:</strong> Easy to configure dev/stage/prod workflows</li>
+                <li><strong>✅ Approval Gates:</strong> Built-in approval for production deployments</li>
+                <li><strong>✅ Visibility:</strong> Deployment status visible in GitHub UI</li>
+            </ul>
+        </div>
+
+        <h3>3.5 GitHub Actions Limitations</h3>
+        <div class="warning-box">
+            <ul>
+                <li><strong>⚠️ PowerShell Script Integration:</strong> Requires converting PowerShell scripts to bash/Node.js or running in Docker</li>
+                <li><strong>⚠️ Runner Costs:</strong> Private repos: $0.008/minute for Linux runners (after free tier)</li>
+                <li><strong>⚠️ AWS Secrets Management:</strong> Requires storing AWS credentials in GitHub Secrets</li>
+                <li><strong>⚠️ Infrastructure as Code:</strong> Initial infrastructure setup still needs Terraform/CloudFormation</li>
+            </ul>
+        </div>
+
+        <h3>3.6 Estimated Automation with GitHub Actions</h3>
+        <div class="metric-box">
+            <div class="metric-label">Automation Level Achievable</div>
+            <div class="metric-value">90%</div>
+            <div class="metric-label">Remaining Manual Steps</div>
+            <div class="metric-label">Initial infrastructure setup (one-time), production approvals</div>
+        </div>
+
+        <h2 id="aws-automation">4. AWS Native Automation</h2>
+
+        <h3>4.1 AWS CodePipeline + CodeBuild + CodeDeploy</h3>
+        <p>AWS provides a fully managed CI/CD service stack that integrates seamlessly with other AWS services.</p>
+
+        <div class="diagram">
+AWS CodePipeline Flow:
+│
+├── Source Stage (CodeCommit / GitHub / S3)
+│   └── Trigger: Code change detection
+│
+├── Build Stage (AWS CodeBuild)
+│   ├── Run tests
+│   ├── Build application (Maven)
+│   ├── Build Docker image
+│   └── Push to ECR
+│
+├── Deploy Stage (AWS CodeDeploy / ECS)
+│   ├── Generate task definition
+│   ├── Register task definition
+│   ├── Update ECS service
+│   └── Verify deployment
+│
+└── Approval Gate (Manual for Prod)
+    └── Requires manual approval before prod deployment
+        </div>
+
+        <h3>4.2 AWS CodeBuild buildspec.yml</h3>
+        <div class="command-block">
+            <pre class="command-text"># buildspec.yml (for AWS CodeBuild)
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - mvn clean package -DskipTests
+      - docker build -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:latest
+      - echo Writing image definitions file...
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files:
+    - imagedefinitions.json
+    - taskdef.json</pre>
+            <button class="copy-button" id="copy-codebuild" onclick="copyToClipboard(this.previousElementSibling.textContent, 'copy-codebuild')">Copy buildspec.yml</button>
+        </div>
+
+        <h3>4.3 AWS Automation Advantages</h3>
+        <div class="success-box">
+            <ul>
+                <li><strong>✅ Native AWS Integration:</strong> Seamless integration with ECR, ECS, Secrets Manager</li>
+                <li><strong>✅ IAM Integration:</strong> Uses IAM roles, no credential management needed</li>
+                <li><strong>✅ Scalability:</strong> Auto-scales build instances based on load</li>
+                <li><strong>✅ Cost Effective:</strong> Pay only for build minutes used</li>
+                <li><strong>✅ PowerShell Support:</strong> CodeBuild supports Windows environments for PowerShell scripts</li>
+                <li><strong>✅ VPC Integration:</strong> Can run builds in VPC for secure database access</li>
+                <li><strong>✅ CloudWatch Integration:</strong> Built-in logging and monitoring</li>
+            </ul>
+        </div>
+
+        <h3>4.4 AWS Automation Limitations</h3>
+        <div class="warning-box">
+            <ul>
+                <li><strong>⚠️ Setup Complexity:</strong> Requires initial setup of CodePipeline, CodeBuild projects</li>
+                <li><strong>⚠️ Cost:</strong> CodeBuild: $0.005/build-minute, CodePipeline: $1.00/month per active pipeline</li>
+                <li><strong>⚠️ UI-Based Configuration:</strong> Some configuration done through console (though IaC possible)</li>
+                <li><strong>⚠️ Less Developer-Friendly:</strong> GitHub Actions is more familiar to developers</li>
+            </ul>
+        </div>
+
+        <h3>4.5 Estimated Automation with AWS Services</h3>
+        <div class="metric-box">
+            <div class="metric-label">Automation Level Achievable</div>
+            <div class="metric-value">95%</div>
+            <div class="metric-label">Remaining Manual Steps</div>
+            <div class="metric-label">Production approvals (if configured)</div>
+        </div>
+
+        <h2 id="hybrid-approach">5. Hybrid Approach</h2>
+
+        <h3>5.1 GitHub Actions + AWS CodeBuild</h3>
+        <p>Combine GitHub Actions for CI (testing, code quality) and AWS CodeBuild for CD (build, deploy) to leverage the strengths of both platforms.</p>
+
+        <div class="diagram">
+Hybrid Workflow:
+│
+├── GitHub Actions (CI)
+│   ├── Code quality checks
+│   ├── Unit tests
+│   ├── Security scanning
+│   └── Trigger AWS CodeBuild on success
+│
+└── AWS CodeBuild (CD)
+    ├── Build application
+    ├── Build Docker image
+    ├── Push to ECR
+    ├── Deploy to ECS
+    └── Verify deployment
+        </div>
+
+        <h3>5.2 Hybrid Approach Benefits</h3>
+        <div class="info-box">
+            <ul>
+                <li><strong>✅ Best of Both Worlds:</strong> GitHub's developer experience + AWS native integration</li>
+                <li><strong>✅ Cost Optimization:</strong> Use free GitHub Actions minutes for CI, AWS CodeBuild for deployment</li>
+                <li><strong>✅ PowerShell Support:</strong> Use AWS CodeBuild Windows environment for existing scripts</li>
+                <li><strong>✅ Security:</strong> AWS credentials stay in AWS IAM, not GitHub Secrets</li>
+            </ul>
+        </div>
+
+        <h2 id="comparison">6. Solution Comparison</h2>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Criteria</th>
+                    <th>GitHub Actions</th>
+                    <th>AWS CodePipeline</th>
+                    <th>Hybrid Approach</th>
+                    <th>Current (Manual)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Setup Time</strong></td>
+                    <td>2-4 hours</td>
+                    <td>4-8 hours</td>
+                    <td>4-6 hours</td>
+                    <td>N/A (already done)</td>
+                </tr>
+                <tr>
+                    <td><strong>Automation Level</strong></td>
+                    <td>90%</td>
+                    <td>95%</td>
+                    <td>92%</td>
+                    <td>15%</td>
+                </tr>
+                <tr>
+                    <td><strong>Cost (per deployment)</strong></td>
+                    <td>$0 - $0.50</td>
+                    <td>$0.25 - $1.00</td>
+                    <td>$0.10 - $0.60</td>
+                    <td>$0 (developer time)</td>
+                </tr>
+                <tr>
+                    <td><strong>Developer Experience</strong></td>
+                    <td>Excellent</td>
+                    <td>Good</td>
+                    <td>Very Good</td>
+                    <td>Poor</td>
+                </tr>
+                <tr>
+                    <td><strong>PowerShell Script Support</strong></td>
+                    <td>Requires conversion</td>
+                    <td>Native (Windows)</td>
+                    <td>Native (Windows)</td>
+                    <td>Native</td>
+                </tr>
+                <tr>
+                    <td><strong>AWS Integration</strong></td>
+                    <td>Good (via SDK)</td>
+                    <td>Excellent (native)</td>
+                    <td>Excellent (native)</td>
+                    <td>Manual scripts</td>
+                </tr>
+                <tr>
+                    <td><strong>Maintenance</strong></td>
+                    <td>Low</td>
+                    <td>Medium</td>
+                    <td>Medium</td>
+                    <td>High</td>
+                </tr>
+                <tr>
+                    <td><strong>Deployment Speed</strong></td>
+                    <td>10-15 min</td>
+                    <td>12-18 min</td>
+                    <td>11-16 min</td>
+                    <td>16-30 min</td>
+                </tr>
+                <tr>
+                    <td><strong>Error Recovery</strong></td>
+                    <td>Automated rollback</td>
+                    <td>Automated rollback</td>
+                    <td>Automated rollback</td>
+                    <td>Manual</td>
+                </tr>
+                <tr>
+                    <td><strong>Visibility & Logging</strong></td>
+                    <td>GitHub UI</td>
+                    <td>CloudWatch + Console</td>
+                    <td>Both</td>
+                    <td>Manual checks</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2 id="recommendations">7. Recommendations</h2>
+
+        <h3>7.1 Recommended Solution: GitHub Actions (Primary)</h3>
+        <div class="success-box">
+            <strong>🎯 Why GitHub Actions:</strong>
+            <ul>
+                <li><strong>Fastest to Implement:</strong> Can be set up in 2-4 hours</li>
+                <li><strong>Best Developer Experience:</strong> Familiar YAML syntax, integrated with GitHub</li>
+                <li><strong>Cost Effective:</strong> Free for public repos, 2,000 free minutes/month for private</li>
+                <li><strong>Version Controlled:</strong> Workflows live in the repository</li>
+                <li><strong>Easy Rollback:</strong> Simply revert workflow file if needed</li>
+                <li><strong>Community Support:</strong> Extensive documentation and examples</li>
+            </ul>
+        </div>
+
+        <h3>7.2 Migration Strategy</h3>
+        <div class="workflow-box">
+            <div class="workflow-step">
+                <span class="step-number">1</span>
+                <strong>Phase 1: Convert PowerShell Scripts (Week 1)</strong>
+                <ul>
+                    <li>Convert <code>generate-task-def-from-properties-batch-jobs.ps1</code> to Node.js/Python</li>
+                    <li>Or use PowerShell Core in GitHub Actions Linux runner</li>
+                    <li>Create reusable GitHub Actions composite action for common tasks</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">2</span>
+                <strong>Phase 2: Implement Dev Environment Automation (Week 2)</strong>
+                <ul>
+                    <li>Create <code>.github/workflows/deploy-dev.yml</code></li>
+                    <li>Configure GitHub Secrets (AWS credentials)</li>
+                    <li>Test automated deployment to dev environment</li>
+                    <li>Validate health checks and rollback mechanisms</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">3</span>
+                <strong>Phase 3: Add Stage/Prod Workflows (Week 3)</strong>
+                <ul>
+                    <li>Create production workflow with approval gates</li>
+                    <li>Implement deployment strategies (blue/green, canary)</li>
+                    <li>Add notification integrations (Slack, email)</li>
+                </ul>
+            </div>
+
+            <div class="workflow-step">
+                <span class="step-number">4</span>
+                <strong>Phase 4: Optimize & Document (Week 4)</strong>
+                <ul>
+                    <li>Add caching for Maven dependencies</li>
+                    <li>Optimize Docker build times</li>
+                    <li>Document deployment process</li>
+                    <li>Train team on new process</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>7.3 Alternative: AWS CodePipeline (If PowerShell Scripts Must Stay)</h3>
+        <div class="info-box">
+            <p><strong>Consider AWS CodePipeline if:</strong></p>
+            <ul>
+                <li>PowerShell scripts are complex and conversion is not feasible</li>
+                <li>You want deeper AWS integration (VPC, Secrets Manager)</li>
+                <li>You prefer AWS-native tooling</li>
+                <li>You have AWS credits or budget for CodeBuild minutes</li>
+            </ul>
+        </div>
+
+        <h2 id="implementation">8. Implementation Roadmap</h2>
+
+        <h3>8.1 Immediate Actions (Week 1)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Effort</th>
+                    <th>Owner</th>
+                    <th>Deliverable</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Convert PowerShell scripts to Node.js/Python</td>
+                    <td>8-16 hours</td>
+                    <td>DevOps Engineer</td>
+                    <td>Converted scripts ready for CI/CD</td>
+                </tr>
+                <tr>
+                    <td>Set up GitHub Secrets</td>
+                    <td>1 hour</td>
+                    <td>DevOps Engineer</td>
+                    <td>AWS credentials configured</td>
+                </tr>
+                <tr>
+                    <td>Create initial GitHub Actions workflow for dev</td>
+                    <td>4-8 hours</td>
+                    <td>DevOps Engineer</td>
+                    <td>Working dev deployment workflow</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>8.2 Short-term Goals (Month 1)</h3>
+        <ul>
+            <li>✅ Fully automated dev deployments on push to main</li>
+            <li>✅ Automated testing in CI pipeline</li>
+            <li>✅ Automated rollback on deployment failure</li>
+            <li>✅ Deployment notifications (Slack/email)</li>
+            <li>✅ Deployment history and logs accessible in GitHub</li>
+        </ul>
+
+        <h3>8.3 Medium-term Goals (Month 2-3)</h3>
+        <ul>
+            <li>✅ Stage environment automation with approval gates</li>
+            <li>✅ Production environment automation with approval gates</li>
+            <li>✅ Blue/green deployment strategy</li>
+            <li>✅ Automated smoke tests post-deployment</li>
+            <li>✅ Performance testing in CI pipeline</li>
+        </ul>
+
+        <h3>8.4 Long-term Goals (Month 4+)</h3>
+        <ul>
+            <li>✅ Infrastructure as Code (Terraform/CloudFormation)</li>
+            <li>✅ Multi-region deployment support</li>
+            <li>✅ Canary deployments for production</li>
+            <li>✅ Automated security scanning</li>
+            <li>✅ Cost optimization and monitoring</li>
+        </ul>
+
+        <h3>8.5 Success Metrics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Current</th>
+                    <th>Target (Month 1)</th>
+                    <th>Target (Month 3)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Deployment Time</strong></td>
+                    <td>16-30 minutes</td>
+                    <td>12-18 minutes</td>
+                    <td>10-15 minutes</td>
+                </tr>
+                <tr>
+                    <td><strong>Manual Steps</strong></td>
+                    <td>13-20 steps</td>
+                    <td>0-2 steps (approval only)</td>
+                    <td>0 steps (fully automated)</td>
+                </tr>
+                <tr>
+                    <td><strong>Deployment Frequency</strong></td>
+                    <td>1-2/week</td>
+                    <td>Daily</td>
+                    <td>Multiple/day</td>
+                </tr>
+                <tr>
+                    <td><strong>Failed Deployments</strong></td>
+                    <td>~10%</td>
+                    <td>&lt;5%</td>
+                    <td>&lt;2%</td>
+                </tr>
+                <tr>
+                    <td><strong>Rollback Time</strong></td>
+                    <td>15-30 minutes</td>
+                    <td>&lt;5 minutes</td>
+                    <td>&lt;2 minutes</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>8.6 Cost Analysis</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Solution</th>
+                    <th>Monthly Cost (10 deployments)</th>
+                    <th>Annual Cost</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>GitHub Actions (Private Repo)</strong></td>
+                    <td>$0 - $5</td>
+                    <td>$0 - $60</td>
+                    <td>2,000 free minutes/month usually sufficient</td>
+                </tr>
+                <tr>
+                    <td><strong>AWS CodePipeline</strong></td>
+                    <td>$2.50 - $10</td>
+                    <td>$30 - $120</td>
+                    <td>$1/pipeline + CodeBuild minutes</td>
+                </tr>
+                <tr>
+                    <td><strong>Hybrid Approach</strong></td>
+                    <td>$1 - $6</td>
+                    <td>$12 - $72</td>
+                    <td>GitHub Actions CI + AWS CodeBuild CD</td>
+                </tr>
+                <tr>
+                    <td><strong>Current (Manual)</strong></td>
+                    <td>$0 (dev time)</td>
+                    <td>$0 (dev time)</td>
+                    <td>Hidden cost: developer productivity</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <strong>💰 Cost Savings Note:</strong> While automation has a small monthly cost, the time savings (16-30 minutes per deployment × frequency) significantly outweighs the cost. At 10 deployments/month, automation saves approximately 3-5 hours of developer time monthly, which is worth significantly more than $5-10/month in automation costs.
+        </div>
+
+        <h3>8.7 Risk Mitigation</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Risk</th>
+                    <th>Mitigation Strategy</th>
+                    <th>Implementation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Automated deployment breaks production</strong></td>
+                    <td>Approval gates, canary deployments, automated rollback</td>
+                    <td>Require manual approval for prod, automated health checks</td>
+                </tr>
+                <tr>
+                    <td><strong>PowerShell script conversion issues</strong></td>
+                    <td>Gradual migration, test thoroughly in dev</td>
+                    <td>Convert one script at a time, maintain parallel execution</td>
+                </tr>
+                <tr>
+                    <td><strong>Credential exposure</strong></td>
+                    <td>Use GitHub Secrets, IAM roles, least privilege</td>
+                    <td>Rotate credentials regularly, use environment-specific secrets</td>
+                </tr>
+                <tr>
+                    <td><strong>Pipeline failures block deployments</strong></td>
+                    <td>Fallback to manual process, fix pipeline quickly</td>
+                    <td>Keep manual scripts as backup, document fallback process</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr style="margin: 40px 0; border: none; border-top: 2px solid #ddd;">
+
+        <div class="info-box">
+            <p><strong>📝 Document Version:</strong> 1.0</p>
+            <p><strong>📅 Created:</strong> 2025-12-20</p>
+            <p><strong>📧 For Questions:</strong> Refer to the deployment guide or AWS/GitHub documentation</p>
+            <p><strong>🔗 Related Documentation:</strong></p>
+            <ul>
+                <li><code>BATCH_JOBS_DEPLOYMENT_GUIDE.html</code> - Current manual deployment guide</li>
+                <li><a href="https://docs.github.com/en/actions" target="_blank">GitHub Actions Documentation</a></li>
+                <li><a href="https://docs.aws.amazon.com/codepipeline/" target="_blank">AWS CodePipeline Documentation</a></li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
+

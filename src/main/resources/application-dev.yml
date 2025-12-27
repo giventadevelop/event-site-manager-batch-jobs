@@ -18,3 +18,8 @@ logging:
     com.eventmanager.batch: DEBUG
     org.springframework.batch: DEBUG
 
+# Subscription Renewal Fallback Configuration (Dev Profile)
+subscription:
+  renewal:
+    use-database-fallback: ${USE_DATABASE_FALLBACK:true}  # Enable database fallback for dev/testing by default
+

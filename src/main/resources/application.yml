@@ -90,6 +90,11 @@ batch:
     max-subscriptions: ${SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS:10000}
     days-before-renewal: ${SUBSCRIPTION_RENEWAL_DAYS_BEFORE:7}
 
+# Subscription Renewal Fallback Configuration
+subscription:
+  renewal:
+    use-database-fallback: ${USE_DATABASE_FALLBACK:false}  # Set to true for dev/testing, false for production
+
   email:
     enabled: ${EMAIL_BATCH_ENABLED:true}
     schedule-cron: ${EMAIL_BATCH_CRON:0 0 2 * * *}  # Daily at 2 AM
