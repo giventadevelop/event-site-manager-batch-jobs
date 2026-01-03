@@ -83,17 +83,69 @@ public class SubscriptionRenewalReader implements ItemReader<MembershipSubscript
         try {
             // If specific stripeSubscriptionId is provided, fetch only that subscription
             if (stripeSubscriptionId != null && !stripeSubscriptionId.isEmpty()) {
-                log.debug("Loading specific subscription: stripeSubscriptionId={}, tenantId={}",
+                log.info("Loading specific subscription - stripeSubscriptionId: {}, tenantId: {}",
                     stripeSubscriptionId, tenantId);
-                return repository.findByStripeSubscriptionIdAndTenantId(stripeSubscriptionId, tenantId);
+                List<MembershipSubscription> subscriptions = repository.findByStripeSubscriptionIdAndTenantId(stripeSubscriptionId, tenantId);
+
+                // Detailed logging for specific subscription query
+                log.info("Query executed with parameters: tenantId={}, stripeSubscriptionId={}",
+                    tenantId, stripeSubscriptionId);
+                log.info("Query results: Found {} subscription(s) matching criteria", subscriptions.size());
+
+                if (!subscriptions.isEmpty()) {
+                    log.debug("Subscription IDs found: {}",
+                        subscriptions.stream()
+                            .map(MembershipSubscription::getId)
+                            .toList());
+                } else {
+                    log.warn("No subscription found with stripeSubscriptionId={} for tenant={}. " +
+                            "Check: 1) Stripe subscription ID is correct, 2) Subscription exists for this tenant",
+                        stripeSubscriptionId, tenantId);
+                }
+
+                return subscriptions;
             }
 
             // Otherwise, load subscriptions that need renewal
-            LocalDate renewalDateThreshold = LocalDate.now().plusDays(renewalDaysAhead);
-            LocalDate extendedDateThreshold = LocalDate.now().plusDays(stripeCheckExtendedDays);
-            log.debug("Loading subscriptions needing renewal - renewal window: {}, extended window for Stripe check: {}, tenantId={}",
+            LocalDate today = LocalDate.now();
+            LocalDate renewalDateThreshold = today.plusDays(renewalDaysAhead);
+            LocalDate extendedDateThreshold = today.plusDays(stripeCheckExtendedDays);
+
+            // Detailed query logging with all parameters
+            log.info("Loading subscriptions needing renewal - renewal window: {}, extended window for Stripe check: {}, tenantId={}",
                 renewalDateThreshold, extendedDateThreshold, tenantId);
-            return repository.findSubscriptionsNeedingRenewal(tenantId, renewalDateThreshold, extendedDateThreshold);
+            log.info("Query executed with parameters: tenantId={}, renewalDateThreshold={}, extendedDateThreshold={}, " +
+                    "renewalDaysAhead={}, stripeCheckExtendedDays={}, today={}",
+                tenantId, renewalDateThreshold, extendedDateThreshold,
+                renewalDaysAhead, stripeCheckExtendedDays, today);
+
+            List<MembershipSubscription> subscriptions = repository.findSubscriptionsNeedingRenewal(
+                tenantId, renewalDateThreshold, extendedDateThreshold);
+
+            // Detailed logging of query results
+            log.info("Query results: Found {} subscription(s) matching renewal criteria", subscriptions.size());
+
+            if (!subscriptions.isEmpty()) {
+                log.debug("Subscription IDs found: {}",
+                    subscriptions.stream()
+                        .map(MembershipSubscription::getId)
+                        .toList());
+
+                // Log summary statistics
+                long withStripeId = subscriptions.stream()
+                    .filter(s -> s.getStripeSubscriptionId() != null && !s.getStripeSubscriptionId().isEmpty())
+                    .count();
+                log.debug("Subscription breakdown: {} with Stripe ID, {} without Stripe ID",
+                    withStripeId, subscriptions.size() - withStripeId);
+            } else {
+                log.warn("No subscriptions found matching renewal criteria for tenant: {}. " +
+                        "Check: 1) Tenant ID is correct, 2) Subscriptions exist with ACTIVE/TRIALING status, " +
+                        "3) Subscriptions are not cancelled (cancel_at_period_end=false), " +
+                        "4) current_period_end is within renewal windows (standard: {} days, extended: {} days)",
+                    tenantId, renewalDaysAhead, stripeCheckExtendedDays);
+            }
+
+            return subscriptions;
         } catch (Exception e) {
             log.error("Error loading subscriptions for tenant {}: {}", tenantId, e.getMessage(), e);
             return List.of();

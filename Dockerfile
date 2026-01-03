@@ -46,3 +46,17 @@ ENTRYPOINT ["sh", "-c", "java -Djava.io.tmpdir=${JAVA_TMPDIR} -jar app.jar"]
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

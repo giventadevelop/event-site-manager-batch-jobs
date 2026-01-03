@@ -35,4 +35,11 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
         @Param("stripeSubscriptionId") String stripeSubscriptionId,
         @Param("tenantId") String tenantId
     );
+
+    /**
+     * Get all distinct tenant IDs from membership_subscription table.
+     * Used by scheduled batch job to process all tenants individually.
+     */
+    @Query("SELECT DISTINCT ms.tenantId FROM MembershipSubscription ms WHERE ms.tenantId IS NOT NULL")
+    List<String> findAllDistinctTenantIds();
 }

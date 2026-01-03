@@ -9,9 +9,12 @@ services:
     ports:
       - "${SERVER_PORT:-8081}:8081"
     environment:
+      # Spring Profile Configuration
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+
       # Server Configuration
       - SERVER_PORT=${SERVER_PORT:-8081}
-      
+
       # Database Configuration
       # Use PostgreSQL container name when both containers are on the same network
       # Use 'host.docker.internal' to connect to PostgreSQL running on host
@@ -22,7 +25,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_MAX_POOL_SIZE=${DB_MAX_POOL_SIZE:-10}
       - DB_MIN_IDLE=${DB_MIN_IDLE:-2}
-      
+
       # AWS Configuration
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -30,21 +33,25 @@ services:
       - AWS_SES_FROM_EMAIL=${AWS_SES_FROM_EMAIL:-noreply@example.com}
       - AWS_SES_RATE_LIMIT_PER_SECOND=${AWS_SES_RATE_LIMIT_PER_SECOND:-200}
       - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-}
-      
+
       # Stripe Configuration (optional - can also be loaded from database)
       - STRIPE_DEFAULT_API_KEY=${STRIPE_DEFAULT_API_KEY:-}
       
+      # Payment Encryption Configuration
+      - PAYMENT_ENCRYPTION_KEY=${PAYMENT_ENCRYPTION_KEY:-}
+
       # Batch Job Configuration (optional)
       - SUBSCRIPTION_RENEWAL_ENABLED=${SUBSCRIPTION_RENEWAL_ENABLED:-true}
       - SUBSCRIPTION_RENEWAL_CRON=${SUBSCRIPTION_RENEWAL_CRON:-0 0 */6 * * *}
       - SUBSCRIPTION_RENEWAL_BATCH_SIZE=${SUBSCRIPTION_RENEWAL_BATCH_SIZE:-100}
       - SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS=${SUBSCRIPTION_RENEWAL_MAX_SUBSCRIPTIONS:-10000}
       - SUBSCRIPTION_RENEWAL_DAYS_BEFORE=${SUBSCRIPTION_RENEWAL_DAYS_BEFORE:-7}
+      - USE_DATABASE_FALLBACK=${USE_DATABASE_FALLBACK:-true}  # Set to true for dev/testing, false for production
       - EMAIL_BATCH_ENABLED=${EMAIL_BATCH_ENABLED:-true}
       - EMAIL_BATCH_CRON=${EMAIL_BATCH_CRON:-0 0 2 * * *}
       - EMAIL_BATCH_SIZE=${EMAIL_BATCH_SIZE:-50}
       - EMAIL_BATCH_MAX_EMAILS=${EMAIL_BATCH_MAX_EMAILS:-10000}
-      
+
       # Temp directory (machine-agnostic, set by Dockerfile)
       - JAVA_TMPDIR=/tmp/spring-boot-tomcat
       - TMPDIR=/tmp/spring-boot-tomcat
