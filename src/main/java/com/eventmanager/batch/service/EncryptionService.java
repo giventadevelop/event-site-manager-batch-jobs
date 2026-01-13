@@ -63,7 +63,13 @@ public class EncryptionService {
 
             // Decode encryption key (base64)
             // Remove any whitespace or escape characters that might be in the environment variable
-            String cleanKey = encryptionKey.trim().replace("\\=", "=");
+            // Handle escaped equals signs and remove any invalid backslash characters
+            String cleanKey = encryptionKey
+                .trim()                              // Remove leading/trailing whitespace
+                .replace("\\=", "=")                 // Replace escaped equals signs
+                .replace("\\", "")                   // Remove any remaining backslash characters (invalid in Base64, ASCII 5c)
+                .replaceAll("\\s", "");              // Remove any remaining whitespace
+
             byte[] keyBytes;
             try {
                 keyBytes = Base64.getDecoder().decode(cleanKey);

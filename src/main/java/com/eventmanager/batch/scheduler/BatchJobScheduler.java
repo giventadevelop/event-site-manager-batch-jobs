@@ -1,7 +1,9 @@
 package com.eventmanager.batch.scheduler;
 
+import com.eventmanager.batch.repository.EventTicketTransactionRepository;
 import com.eventmanager.batch.repository.MembershipSubscriptionRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
+import com.eventmanager.batch.service.StripeFeesTaxUpdateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,12 +23,17 @@ public class BatchJobScheduler {
 
     private final BatchJobOrchestrationService batchJobOrchestrationService;
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
+    private final StripeFeesTaxUpdateService stripeFeesTaxUpdateService;
+    private final EventTicketTransactionRepository transactionRepository;
 
     @Value("${batch.subscription-renewal.enabled:true}")
     private boolean subscriptionRenewalEnabled;
 
     @Value("${batch.email.enabled:true}")
     private boolean emailBatchEnabled;
+
+    @Value("${batch.stripe-fees-tax.enabled:true}")
+    private boolean stripeFeesTaxEnabled;
 
     /**
      * Scheduled subscription renewal job.
@@ -105,6 +112,45 @@ public class BatchJobScheduler {
             // This could process pending email jobs or select templates based on configuration
         } catch (Exception e) {
             log.error("Failed to execute scheduled email batch job: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Scheduled Stripe fees and tax update job.
+     * Runs daily at 2 AM by default (configurable via cron expression).
+     * Processes all tenants with 14-day delay logic (only processes transactions from current month
+     * that are at least 14 days old to ensure Stripe payout is complete).
+     */
+    @Scheduled(cron = "${batch.stripe-fees-tax.schedule-cron:0 0 2 * * *}")
+    public void scheduledStripeFeesTaxUpdate() {
+        if (!stripeFeesTaxEnabled) {
+            log.debug("Stripe fees and tax update job is disabled, skipping scheduled execution");
+            return;
+        }
+
+        try {
+            log.info("Starting scheduled Stripe fees and tax update batch job for all tenants (14-day delay)");
+
+            // Process all tenants (tenantId = null) and all events (eventId = null)
+            // useDefaultDateRange = true will automatically calculate:
+            // - Start Date: First day of current month
+            // - End Date: Today minus 14 days
+            stripeFeesTaxUpdateService.processStripeFeesAndTax(null, null, null, null, false, true)
+                .thenAccept(stats -> {
+                    log.info("Completed scheduled Stripe fees and tax update job. " +
+                            "Tenants processed: {}, Transactions processed: {}, " +
+                            "Successfully updated: {}, Failed: {}, Skipped: {}",
+                        stats.totalTenantsProcessed, stats.totalProcessed,
+                        stats.successfullyUpdated, stats.failed, stats.skipped);
+                })
+                .exceptionally(ex -> {
+                    log.error("Failed to execute scheduled Stripe fees and tax update job: {}",
+                        ex.getMessage(), ex);
+                    return null;
+                });
+
+        } catch (Exception e) {
+            log.error("Failed to start scheduled Stripe fees and tax update job: {}", e.getMessage(), e);
         }
     }
 }

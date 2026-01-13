@@ -27,9 +27,6 @@ public class PaymentProviderConfig implements Serializable {
 
     @Column(name = "provider_secret_key_encrypted", columnDefinition = "text")
     private String providerSecretKeyEncrypted; // Encrypted provider secret key (AES-256-GCM)
-
-    @Column(name = "config_json", columnDefinition = "jsonb")
-    private String configJson; // JSON containing API keys and other config
 }
 
 

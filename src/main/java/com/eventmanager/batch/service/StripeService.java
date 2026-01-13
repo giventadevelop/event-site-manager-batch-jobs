@@ -86,21 +86,6 @@ public class StripeService {
                 }
             }
 
-            // Fallback: try config_json if encrypted field is not available
-            if (config.getConfigJson() != null && !config.getConfigJson().isEmpty()) {
-                log.debug("Using config_json for Stripe API key (encrypted field not available)");
-                // If config_json contains encrypted value, try to decrypt it
-                // Otherwise, assume it's plain text (not recommended for production)
-                try {
-                    // Try to decrypt it first
-                    String decryptedKey = encryptionService.decrypt(config.getConfigJson());
-                    return decryptedKey;
-                } catch (Exception e) {
-                    // If decryption fails, assume it's plain text (legacy support)
-                    log.warn("Config JSON decryption failed, assuming plain text for tenant: {}", tenantId);
-                    return config.getConfigJson();
-                }
-            }
 
             log.warn("Stripe secret key not found in configuration for tenant: {}", tenantId);
             return null;

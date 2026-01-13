@@ -81,6 +81,15 @@ aws:
 stripe:
   default-api-key: ${STRIPE_DEFAULT_API_KEY:}
 
+# Backend API Configuration
+backend:
+  api:
+    base-url: ${BACKEND_API_BASE_URL:${NEXT_PUBLIC_API_BASE_URL:http://localhost:8080}}
+    jwt:
+      username: ${API_JWT_USER:${NEXT_PUBLIC_API_JWT_USER:}}
+      password: ${API_JWT_PASS:${NEXT_PUBLIC_API_JWT_PASS:}}
+      cache-ttl-seconds: ${BACKEND_JWT_CACHE_TTL_SECONDS:3600}
+
 # Batch Job Configuration
 batch:
   subscription-renewal:
@@ -100,6 +109,12 @@ subscription:
     schedule-cron: ${EMAIL_BATCH_CRON:0 0 2 * * *}  # Daily at 2 AM
     batch-size: ${EMAIL_BATCH_SIZE:50}
     max-emails: ${EMAIL_BATCH_MAX_EMAILS:10000}
+
+  stripe-fees-tax:
+    enabled: ${STRIPE_FEES_TAX_ENABLED:true}
+    schedule-cron: ${STRIPE_FEES_TAX_CRON:0 0 2 * * *}  # Daily at 2 AM
+    batch-size: ${STRIPE_FEES_TAX_BATCH_SIZE:100}
+    rate-limit-delay-ms: ${STRIPE_FEES_TAX_RATE_LIMIT_DELAY_MS:100}
 
 # Logging
 logging:
