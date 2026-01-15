@@ -29,7 +29,8 @@ public class PromotionEmailSentLog implements Serializable {
     @Column(name = "template_id")
     private Long templateId;
 
-    @Column(name = "event_id", nullable = false)
+    // Can be null for newsletter/test emails (templates without eventId).
+    @Column(name = "event_id", nullable = true)
     private Long eventId;
 
     @Column(name = "recipient_email", length = 255, nullable = false)

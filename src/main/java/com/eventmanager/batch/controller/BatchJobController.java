@@ -4,11 +4,14 @@ import com.eventmanager.batch.dto.BatchJobRequest;
 import com.eventmanager.batch.dto.BatchJobResponse;
 import com.eventmanager.batch.dto.ContactFormEmailJobRequest;
 import com.eventmanager.batch.dto.ContactFormEmailJobResponse;
+import com.eventmanager.batch.dto.PromotionTestEmailJobRequest;
+import com.eventmanager.batch.dto.PromotionTestEmailJobResponse;
 import com.eventmanager.batch.dto.StripeFeesTaxUpdateRequest;
 import com.eventmanager.batch.dto.StripeFeesTaxUpdateResponse;
 import com.eventmanager.batch.repository.EventTicketTransactionRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
 import com.eventmanager.batch.service.ContactFormEmailJobService;
+import com.eventmanager.batch.service.PromotionTestEmailJobService;
 import com.eventmanager.batch.service.StripeFeesTaxUpdateService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class BatchJobController {
     private final BatchJobOrchestrationService batchJobOrchestrationService;
     private final StripeFeesTaxUpdateService stripeFeesTaxUpdateService;
     private final ContactFormEmailJobService contactFormEmailJobService;
+    private final PromotionTestEmailJobService promotionTestEmailJobService;
     private final EventTicketTransactionRepository transactionRepository;
 
     /**
@@ -122,6 +126,48 @@ public class BatchJobController {
                     .successCount(0L)
                     .failedCount(0L)
                     .build());
+        }
+    }
+
+    /**
+     * Trigger promotion test email job.
+     * Sends a single email for a given promotion email template to a single recipient asynchronously.
+     *
+     * Mirrors the contact-form-email pattern: creates a BatchJobExecution and processes in the background.
+     */
+    @PostMapping("/promotion-test-email")
+    public ResponseEntity<PromotionTestEmailJobResponse> triggerPromotionTestEmail(
+        @Valid @RequestBody PromotionTestEmailJobRequest request
+    ) {
+        try {
+            log.info(
+                "Received request to trigger promotion test email job - tenantId: {}, templateId: {}, recipientEmail: {}",
+                request.getTenantId(),
+                request.getTemplateId(),
+                request.getRecipientEmail()
+            );
+
+            PromotionTestEmailJobResponse response = promotionTestEmailJobService.triggerPromotionTestEmailJob(request);
+
+            if (Boolean.TRUE.equals(response.getSuccess())) {
+                return ResponseEntity.accepted().body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+        } catch (Exception e) {
+            log.error("Failed to trigger promotion test email job: {}", e.getMessage(), e);
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(
+                    PromotionTestEmailJobResponse
+                        .builder()
+                        .success(false)
+                        .message("Failed to trigger job: " + e.getMessage())
+                        .processedCount(0L)
+                        .successCount(0L)
+                        .failedCount(0L)
+                        .build()
+                );
         }
     }
 
