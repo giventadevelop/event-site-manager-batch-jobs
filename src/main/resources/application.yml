@@ -116,6 +116,10 @@ subscription:
     batch-size: ${STRIPE_FEES_TAX_BATCH_SIZE:100}
     rate-limit-delay-ms: ${STRIPE_FEES_TAX_RATE_LIMIT_DELAY_MS:100}
 
+  manual-payment-summary:
+    enabled: ${MANUAL_PAYMENT_SUMMARY_ENABLED:true}
+    schedule-cron: ${MANUAL_PAYMENT_SUMMARY_CRON:0 0 2 * * *}  # Daily at 2 AM
+
 # Logging
 logging:
   level:

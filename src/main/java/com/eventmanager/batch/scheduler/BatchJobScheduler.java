@@ -3,6 +3,7 @@ package com.eventmanager.batch.scheduler;
 import com.eventmanager.batch.repository.EventTicketTransactionRepository;
 import com.eventmanager.batch.repository.MembershipSubscriptionRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
+import com.eventmanager.batch.service.ManualPaymentSummaryJobService;
 import com.eventmanager.batch.service.StripeFeesTaxUpdateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ public class BatchJobScheduler {
     private final MembershipSubscriptionRepository membershipSubscriptionRepository;
     private final StripeFeesTaxUpdateService stripeFeesTaxUpdateService;
     private final EventTicketTransactionRepository transactionRepository;
+    private final ManualPaymentSummaryJobService manualPaymentSummaryJobService;
 
     @Value("${batch.subscription-renewal.enabled:true}")
     private boolean subscriptionRenewalEnabled;
@@ -34,6 +36,9 @@ public class BatchJobScheduler {
 
     @Value("${batch.stripe-fees-tax.enabled:true}")
     private boolean stripeFeesTaxEnabled;
+
+    @Value("${batch.manual-payment-summary.enabled:true}")
+    private boolean manualPaymentSummaryEnabled;
 
     /**
      * Scheduled subscription renewal job.
@@ -151,6 +156,25 @@ public class BatchJobScheduler {
 
         } catch (Exception e) {
             log.error("Failed to start scheduled Stripe fees and tax update job: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Scheduled manual payment summary aggregation job.
+     * Runs nightly at 2 AM by default (configurable via cron expression).
+     */
+    @Scheduled(cron = "${batch.manual-payment-summary.schedule-cron:0 0 2 * * *}")
+    public void scheduledManualPaymentSummaryAggregation() {
+        if (!manualPaymentSummaryEnabled) {
+            log.debug("Manual payment summary job is disabled, skipping scheduled execution");
+            return;
+        }
+
+        try {
+            log.info("Starting scheduled manual payment summary aggregation job for all tenants");
+            manualPaymentSummaryJobService.runManualPaymentSummaryJob(null, null, null, "SCHEDULED");
+        } catch (Exception e) {
+            log.error("Failed to execute scheduled manual payment summary job: {}", e.getMessage(), e);
         }
     }
 }

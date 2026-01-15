@@ -8,9 +8,12 @@ import com.eventmanager.batch.dto.PromotionTestEmailJobRequest;
 import com.eventmanager.batch.dto.PromotionTestEmailJobResponse;
 import com.eventmanager.batch.dto.StripeFeesTaxUpdateRequest;
 import com.eventmanager.batch.dto.StripeFeesTaxUpdateResponse;
+import com.eventmanager.batch.dto.ManualPaymentSummaryJobRequest;
+import com.eventmanager.batch.dto.ManualPaymentSummaryJobResponse;
 import com.eventmanager.batch.repository.EventTicketTransactionRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
 import com.eventmanager.batch.service.ContactFormEmailJobService;
+import com.eventmanager.batch.service.ManualPaymentSummaryJobService;
 import com.eventmanager.batch.service.PromotionTestEmailJobService;
 import com.eventmanager.batch.service.StripeFeesTaxUpdateService;
 import jakarta.validation.Valid;
@@ -37,6 +40,7 @@ public class BatchJobController {
     private final StripeFeesTaxUpdateService stripeFeesTaxUpdateService;
     private final ContactFormEmailJobService contactFormEmailJobService;
     private final PromotionTestEmailJobService promotionTestEmailJobService;
+    private final ManualPaymentSummaryJobService manualPaymentSummaryJobService;
     private final EventTicketTransactionRepository transactionRepository;
 
     /**
@@ -302,6 +306,49 @@ public class BatchJobController {
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Batch Jobs Service is running");
+    }
+
+    /**
+     * Trigger manual payment summary aggregation job.
+     * Supports optional tenantId, eventId, and snapshotDate filters for on-demand runs.
+     */
+    @PostMapping("/manual-payment-summary")
+    public ResponseEntity<ManualPaymentSummaryJobResponse> triggerManualPaymentSummary(
+        @RequestBody(required = false) ManualPaymentSummaryJobRequest request
+    ) {
+        try {
+            if (request == null) {
+                request = new ManualPaymentSummaryJobRequest();
+            }
+
+            ManualPaymentSummaryJobService.ManualPaymentSummaryStats stats =
+                manualPaymentSummaryJobService.runManualPaymentSummaryJob(
+                    request.getTenantId(),
+                    request.getEventId(),
+                    request.getSnapshotDate(),
+                    "API"
+                );
+
+            return ResponseEntity.accepted().body(
+                ManualPaymentSummaryJobResponse.builder()
+                    .success(true)
+                    .message("Manual payment summary job accepted for processing")
+                    .jobExecutionId(stats.jobExecutionId)
+                    .tenantId(stats.tenantId)
+                    .eventId(stats.eventId)
+                    .snapshotDate(stats.snapshotDate)
+                    .deletedRows(stats.deletedRows)
+                    .insertedRows(stats.insertedRows)
+                    .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to trigger manual payment summary job: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ManualPaymentSummaryJobResponse.builder()
+                    .success(false)
+                    .message("Failed to trigger job: " + e.getMessage())
+                    .build());
+        }
     }
 }
 

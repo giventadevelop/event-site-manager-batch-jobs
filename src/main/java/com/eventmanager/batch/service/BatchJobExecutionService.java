@@ -19,12 +19,21 @@ import java.util.List;
 public class BatchJobExecutionService {
 
     private final BatchJobExecutionRepository batchJobExecutionRepository;
+    private final SequenceSynchronizationService sequenceSynchronizationService;
 
     /**
      * Create a new batch job execution record.
      */
     @Transactional
     public BatchJobExecution createJobExecution(String jobName, String jobType, String tenantId, String triggeredBy, String parametersJson) {
+        try {
+            log.debug("Pre-synchronizing sequence_generator before batch job execution: {}", jobName);
+            sequenceSynchronizationService.synchronizeSequence();
+        } catch (Exception e) {
+            log.warn("Failed to pre-synchronize sequence before batch job execution. " +
+                "Will rely on AOP aspect for recovery: {}", e.getMessage());
+        }
+
         BatchJobExecution execution = new BatchJobExecution();
         execution.setJobName(jobName);
         execution.setJobType(jobType);
