@@ -122,4 +122,74 @@ public class SequenceSynchronizationService {
             throw new RuntimeException("Failed to synchronize sequence_generator: " + errorMessage, e);
         }
     }
+
+    /**
+     * Synchronizes the batch_job_execution_log_id_seq sequence (created by BIGSERIAL)
+     * to be at least as high as the maximum ID in the batch_job_execution_log table.
+     * This table uses GenerationType.IDENTITY with BIGSERIAL, which creates its own sequence.
+     *
+     * @return the new sequence value that was set, or null if sequence doesn't exist or sync failed
+     */
+    @Transactional
+    public Long synchronizeBatchJobExecutionLogSequence() {
+        log.debug("Synchronizing batch_job_execution_log_id_seq sequence...");
+
+        try {
+            // Check if sequence exists
+            String checkSequenceSql = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_sequences
+                    WHERE schemaname = 'public'
+                      AND sequencename = 'batch_job_execution_log_id_seq'
+                )
+                """;
+
+            Query checkSequenceQuery = entityManager.createNativeQuery(checkSequenceSql);
+            Boolean sequenceExists = (Boolean) checkSequenceQuery.getSingleResult();
+
+            if (Boolean.FALSE.equals(sequenceExists)) {
+                log.warn("Sequence batch_job_execution_log_id_seq does not exist. " +
+                    "Table may not use BIGSERIAL or sequence was not created.");
+                return null;
+            }
+
+            // Get max ID from batch_job_execution_log table
+            String getMaxIdSql = """
+                SELECT COALESCE(MAX(id), 0)
+                FROM public.batch_job_execution_log
+                """;
+
+            Query getMaxIdQuery = entityManager.createNativeQuery(getMaxIdSql);
+            Object maxIdResult = getMaxIdQuery.getSingleResult();
+            Long maxId = maxIdResult != null ? ((Number) maxIdResult).longValue() : 0L;
+
+            // Set sequence to max ID + 1 (or 1 if table is empty)
+            Long nextSequenceValue = Math.max(maxId + 1, 1L);
+
+            String syncSql = String.format(
+                "SELECT setval('public.batch_job_execution_log_id_seq', %d, true)",
+                nextSequenceValue
+            );
+
+            Query syncQuery = entityManager.createNativeQuery(syncSql);
+            Object result = syncQuery.getSingleResult();
+            Long newSequenceValue = result != null ? ((Number) result).longValue() : nextSequenceValue;
+
+            log.info("batch_job_execution_log_id_seq synchronized successfully. " +
+                "Max ID: {}, New sequence value: {}", maxId, newSequenceValue);
+
+            return newSequenceValue;
+        } catch (Exception e) {
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("permission denied")) {
+                log.warn("Permission denied for batch_job_execution_log_id_seq synchronization. " +
+                    "Database user lacks UPDATE privilege on sequence. Skipping.");
+                return null;
+            }
+            log.error("Failed to synchronize batch_job_execution_log_id_seq", e);
+            // Don't throw - this is a secondary sync, main sequence sync is more important
+            return null;
+        }
+    }
 }

@@ -83,6 +83,17 @@ public class SequenceSynchronizationAspect {
                 try {
                     // Step 1: Synchronize sequence to max ID + increment
                     Long newSequenceValue = sequenceSynchronizationService.synchronizeSequence();
+                    
+                    // Step 1b: Also sync batch_job_execution_log_id_seq if error is for that table
+                    if (isBatchJobExecutionLogError(e)) {
+                        log.debug("Detected batch_job_execution_log duplicate key error. " +
+                            "Synchronizing batch_job_execution_log_id_seq sequence...");
+                        Long batchLogSequenceValue = sequenceSynchronizationService.synchronizeBatchJobExecutionLogSequence();
+                        if (batchLogSequenceValue != null) {
+                            log.info("batch_job_execution_log_id_seq synchronized to value: {}", batchLogSequenceValue);
+                        }
+                    }
+                    
                     log.info(
                         "Sequence synchronized to value: {}. Clearing entity ID(s) and retrying {}.{}() operation...",
                         newSequenceValue,
@@ -340,5 +351,33 @@ public class SequenceSynchronizationAspect {
                                causeMessage.contains("(id)=");
 
         return isDuplicateKey && isPrimaryKey;
+    }
+
+    /**
+     * Checks if the exception is related to batch_job_execution_log table.
+     * 
+     * @param e Exception to check
+     * @return true if error is for batch_job_execution_log table
+     */
+    private boolean isBatchJobExecutionLogError(Exception e) {
+        if (e == null) {
+            return false;
+        }
+
+        String message = e.getMessage();
+        if (message == null) {
+            message = "";
+        }
+        message = message.toLowerCase();
+
+        // Check cause message as well
+        String causeMessage = "";
+        if (e.getCause() != null && e.getCause().getMessage() != null) {
+            causeMessage = e.getCause().getMessage().toLowerCase();
+        }
+
+        // Check if error mentions batch_job_execution_log
+        return message.contains("batch_job_execution_log") ||
+               causeMessage.contains("batch_job_execution_log");
     }
 }

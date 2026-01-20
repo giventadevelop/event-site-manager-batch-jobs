@@ -27,14 +27,27 @@ public class BatchJobExecutionService {
     @Transactional
     public BatchJobExecution createJobExecution(String jobName, String jobType, String tenantId, String triggeredBy, String parametersJson) {
         try {
-            log.debug("Pre-synchronizing sequence_generator before batch job execution: {}", jobName);
+            log.debug("Pre-synchronizing sequences before batch job execution: {}", jobName);
             sequenceSynchronizationService.synchronizeSequence();
+            // Also sync the batch_job_execution_log table-specific sequence
+            sequenceSynchronizationService.synchronizeBatchJobExecutionLogSequence();
         } catch (Exception e) {
-            log.warn("Failed to pre-synchronize sequence before batch job execution. " +
+            log.warn("Failed to pre-synchronize sequences before batch job execution. " +
                 "Will rely on AOP aspect for recovery: {}", e.getMessage());
         }
 
         BatchJobExecution execution = new BatchJobExecution();
+        
+        // Ensure ID is null for new entities to force sequence generation
+        // This prevents duplicate key errors when entity has ID set from DTO or previous state
+        if (execution.getId() != null) {
+            log.warn(
+                "BatchJobExecution has ID {} set during create operation. Clearing ID to force sequence generation.",
+                execution.getId()
+            );
+            execution.setId(null);
+        }
+        
         execution.setJobName(jobName);
         execution.setJobType(jobType);
         execution.setTenantId(tenantId);
