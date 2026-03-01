@@ -76,7 +76,7 @@ When creating database migrations or schema definitions:
    -- ✅ Correct
    field_name VARCHAR(50) NOT NULL,
    CONSTRAINT chk_field_name CHECK (field_name IN ('VALUE1', 'VALUE2', 'VALUE3'))
-   
+
    -- ❌ Do NOT use
    CREATE TYPE field_name_type AS ENUM ('VALUE1', 'VALUE2', 'VALUE3');
    field_name field_name_type NOT NULL

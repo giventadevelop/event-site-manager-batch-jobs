@@ -32,5 +32,8 @@ public class TenantSettings implements Serializable {
 
     @Column(name = "logo_image_url", length = 2048)
     private String logoImageUrl;
+
+    @Column(name = "homepage_cache_version", nullable = false)
+    private Long homepageCacheVersion = 0L;
 }
 

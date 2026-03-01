@@ -234,6 +234,19 @@ See `src/main/resources/application.yml` for all configuration options.
 
 ## Troubleshooting
 
+### Docker build: "file already closed" or stuck at "resolving provenance"
+
+If `docker-compose build` shows **"failed to execute bake: read |0: file already closed"** or hangs at **"resolving provenance for metadata file"**, the image may still be built successfully (check for `naming to ...` and `unpacking to ...` in the output). To avoid the issue next time:
+
+- **Option A (Windows PowerShell):** Disable BuildKit attestations so the build doesn’t hang at the end:
+  ```powershell
+  $env:DOCKER_BUILDKIT=1
+  docker buildx build --provenance=false -f Dockerfile -t event-site-manager-batch-jobs-batch-jobs:latest .
+  ```
+  Then run your stack with `docker-compose up` (Compose will use the image you just built).
+
+- **Option B:** Retry `docker-compose build`; the error is often transient. You can also remove the obsolete `version` key from `docker-compose.yml` if present (it’s ignored and can cause a warning).
+
 ### Job Not Running
 
 1. Check Spring Batch tables are initialized:

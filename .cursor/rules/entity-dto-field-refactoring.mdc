@@ -1,0 +1,64 @@
+---
+description: Add or refactor fields on JPA entities and DTOs without creating duplicates
+globs: "**/domain/*.java,**/service/dto/*.java,**/service/criteria/*.java,**/service/*QueryService.java,**/service/mapper/*.java"
+alwaysApply: false
+---
+
+# Entity and DTO Field Refactoring Rule
+
+When adding or refactoring fields across entities, DTOs, criteria, query services, and mappers, **do not create duplicate fields**. Only add fields that do not already exist on the target entity or DTO.
+
+## Checklist Before Adding a Field
+
+1. **Check the entity** – Search the domain class for the field (e.g. `facebookUrl`, `youtube_url` column). If it exists, skip adding it to the entity.
+2. **Check the DTO** – Search the corresponding DTO for the same property. If it exists, skip adding it to the DTO.
+3. **Check criteria** – If the entity has criteria (e.g. `TenantSettingsCriteria`), add a filter only for **new** fields. Omit filters for fields that already exist.
+4. **Check query service** – Add `buildStringSpecification` / `buildRangeSpecification` only for new criteria filters. Match the order and style of existing filters.
+5. **Mapper** – MapStruct maps same-named properties by default. Only add `@Mapping` when names differ or when ignoring a field.
+6. **Database migration** – Use **preConditions** so columns are added only when they do not exist (e.g. `<preConditions onFail="MARK_RAN"><not><columnExists tableName="..." columnName="..."/></not></preConditions>`). This avoids duplicate column errors on re-run.
+
+## Per-Layer Rules
+
+### Entity (e.g. `TenantSettings.java`)
+
+- Add field with correct `@Column(name = "snake_case", length = N)` and `@Size(max = N)` if applicable.
+- Add getter, setter, and fluent setter (e.g. `entity.field(value)` that returns `this`).
+- Update `toString()` to include the new field.
+
+### DTO (e.g. `TenantSettingsDTO.java`)
+
+- Add the same property with matching validation (`@Size`, etc.). No `@Column`; use plain field.
+- Add getter and setter.
+- Update `toString()`.
+
+### Criteria (e.g. `TenantSettingsCriteria.java`)
+
+- Add filter field (e.g. `StringFilter facebookUrl`).
+- In the copy constructor, copy the new filter (e.g. `this.facebookUrl = other.optionalFacebookUrl().map(StringFilter::copy).orElse(null);`).
+- Add getter, setter, optional getter, and factory method (e.g. `facebookUrl()`) if the pattern exists in that criteria class.
+- Update `equals()`, `hashCode()`, and `toString()`.
+
+### Query service (e.g. `TenantSettingsQueryService.java`)
+
+- Add one `buildStringSpecification` / `buildRangeSpecification` per new criteria filter, using the entity metamodel (e.g. `TenantSettings_.facebookUrl`).
+
+### Liquibase
+
+- One changeSet per new column (or group per table if preferred).
+- Use `preConditions` with `columnExists` so existing schemas are not altered if the column is already present.
+
+## Example: Adding a New Social URL (only if missing)
+
+**Entity already has `facebookUrl` and `instagramUrl`; you need to add `youtubeUrl`:**
+
+- **Entity:** Add `youtubeUrl` field and getters/setters/toString only (do **not** re-add `facebookUrl` or `instagramUrl`).
+- **DTO:** Add `youtubeUrl` only.
+- **Criteria:** Add `StringFilter youtubeUrl` and related copy/get/set/equals/hashCode/toString only.
+- **Query service:** Add one line for `criteria.getYoutubeUrl()` and `Entity_.youtubeUrl` only.
+- **Migration:** Single changeSet adding `youtube_url` with a preCondition that the column does not exist.
+
+## Summary
+
+- **Never duplicate:** Always verify each layer before adding a field.
+- **Same names:** Use consistent Java names (camelCase) and DB names (snake_case).
+- **Migrations:** Make migrations idempotent with preConditions so they are safe to run multiple times.

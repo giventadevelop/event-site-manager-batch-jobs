@@ -756,5 +756,113 @@ public class EmailContentBuilderService {
         fullHtml.append("</body></html>");
         return fullHtml.toString();
     }
+
+    /**
+     * Build HTML body for donation confirmation email.
+     * Includes donation details, event information, and QR code if available.
+     */
+    public String buildDonationConfirmationEmailBody(
+        Long eventId,
+        Long donationId,
+        String transactionReference,
+        java.math.BigDecimal amount,
+        String recipientEmail,
+        String firstName,
+        String lastName,
+        String eventTitle,
+        String qrCodeImageUrl,
+        String tenantId
+    ) {
+        StringBuilder fullHtml = new StringBuilder();
+        fullHtml.append("<!DOCTYPE html><html><head><meta charset='UTF-8'></head><body>");
+
+        // Header image
+        String headerImageUrl = getTenantEmailHeaderImageUrl(tenantId);
+        if (headerImageUrl != null && !headerImageUrl.isEmpty()) {
+            fullHtml.append("<div style='text-align: center; margin-bottom: 20px;'>")
+                .append("<img src='")
+                .append(headerImageUrl)
+                .append("' alt='Header' style='max-width: 100%; height: auto;' />")
+                .append("</div>");
+        }
+
+        // Body content
+        fullHtml.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+
+        fullHtml.append("<h1 style='color: #8b7d6b;'>Thank You for Your Donation!</h1>");
+
+        String recipientName = (firstName != null && !firstName.isEmpty() && lastName != null && !lastName.isEmpty())
+            ? firstName + " " + lastName
+            : (firstName != null && !firstName.isEmpty() ? firstName : "Valued Donor");
+
+        fullHtml.append("<p>Dear ").append(escapeHtml(recipientName)).append(",</p>");
+
+        fullHtml.append("<p>We are deeply grateful for your generous donation");
+        if (eventTitle != null && !eventTitle.isEmpty()) {
+            fullHtml.append(" to <strong>").append(escapeHtml(eventTitle)).append("</strong>");
+        }
+        fullHtml.append(". Your support makes a meaningful difference and helps us continue our mission.</p>");
+
+        // Donation Details
+        fullHtml.append("<h2 style='color: #1f4c8f;'>Donation Details</h2>");
+        fullHtml.append("<table style='width: 100%; border-collapse: collapse; margin: 20px 0;'>");
+        if (transactionReference != null && !transactionReference.isEmpty()) {
+            fullHtml.append("<tr><td style='padding: 8px; border-bottom: 1px solid #ddd;'><strong>Transaction Reference:</strong></td>")
+                .append("<td style='padding: 8px; border-bottom: 1px solid #ddd;'>")
+                .append(escapeHtml(transactionReference))
+                .append("</td></tr>");
+        }
+        fullHtml.append("<tr><td style='padding: 8px; border-bottom: 1px solid #ddd;'><strong>Donation Amount:</strong></td>")
+            .append("<td style='padding: 8px; border-bottom: 1px solid #ddd;'><strong style='color: #059669; font-size: 1.2em;'>$")
+            .append(escapeHtml(amount.toString()))
+            .append("</strong></td></tr>");
+        fullHtml.append("<tr><td style='padding: 8px; border-bottom: 1px solid #ddd;'><strong>Status:</strong></td>")
+            .append("<td style='padding: 8px; border-bottom: 1px solid #ddd;'><span style='color: #059669; font-weight: bold;'>Confirmed</span></td></tr>");
+        fullHtml.append("</table>");
+
+        // QR Code Display (if available)
+        if (qrCodeImageUrl != null && !qrCodeImageUrl.isEmpty()) {
+            fullHtml.append("<div style='text-align: center; margin: 30px 0;'>");
+            fullHtml.append("<img src='")
+                .append(escapeHtml(qrCodeImageUrl))
+                .append("' alt='QR Code for Donation")
+                .append(eventTitle != null ? " - " + escapeHtml(eventTitle) : "")
+                .append("' style='max-width: 300px; height: auto; border: 2px solid #ddd; padding: 10px; background-color: #fff;' />");
+            fullHtml.append("<p style='margin-top: 10px; font-weight: bold;'>Present this QR code at the event for verification</p>");
+            fullHtml.append("</div>");
+        }
+
+        // Event Information (if available)
+        if (eventTitle != null && !eventTitle.isEmpty()) {
+            fullHtml.append("<h2 style='color: #1f4c8f;'>Event Information</h2>");
+            fullHtml.append("<p><strong>").append(escapeHtml(eventTitle)).append("</strong></p>");
+        }
+
+        // Tax Receipt Information
+        fullHtml.append("<h2 style='color: #1f4c8f;'>Tax Receipt</h2>");
+        fullHtml.append("<p>This email serves as your donation receipt. Please keep this email for your records.</p>");
+        fullHtml.append("<p><strong>Donation Date:</strong> ").append(java.time.ZonedDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MMMM dd, yyyy"))).append("</p>");
+        fullHtml.append("<p><strong>Donation Amount:</strong> $").append(escapeHtml(amount.toString())).append("</p>");
+
+        fullHtml.append("<hr style='border: none; border-top: 1px solid #ddd; margin: 30px 0;' />");
+
+        fullHtml.append("<p style='font-size: 0.9em; color: #666;'>")
+            .append("If you have any questions about your donation, please contact us.<br/>");
+        if (eventTitle != null && !eventTitle.isEmpty()) {
+            fullHtml.append("Event: <a href='#'>").append(escapeHtml(eventTitle)).append("</a>");
+        }
+        fullHtml.append("</p>");
+
+        fullHtml.append("</div>");
+
+        // Footer HTML
+        String footerHtml = getTenantEmailFooterHtml(tenantId);
+        if (footerHtml != null && !footerHtml.isEmpty()) {
+            fullHtml.append("<div>").append(footerHtml).append("</div>");
+        }
+
+        fullHtml.append("</body></html>");
+        return fullHtml.toString();
+    }
 }
 

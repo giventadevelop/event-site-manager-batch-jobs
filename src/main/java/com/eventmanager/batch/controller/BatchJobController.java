@@ -16,8 +16,14 @@ import com.eventmanager.batch.dto.ManualPaymentTicketEmailJobRequest;
 import com.eventmanager.batch.dto.ManualPaymentTicketEmailJobResponse;
 import com.eventmanager.batch.dto.StripeTicketBatchRefundRequest;
 import com.eventmanager.batch.dto.StripeTicketBatchRefundResponse;
+import com.eventmanager.batch.dto.DonationEmailJobRequest;
+import com.eventmanager.batch.dto.DonationEmailJobResponse;
+import com.eventmanager.batch.dto.DonationQrCodeJobRequest;
+import com.eventmanager.batch.dto.DonationQrCodeJobResponse;
 import com.eventmanager.batch.repository.EventTicketTransactionRepository;
 import com.eventmanager.batch.service.BatchJobOrchestrationService;
+import com.eventmanager.batch.service.DonationEmailJobService;
+import com.eventmanager.batch.service.DonationQrCodeJobService;
 import com.eventmanager.batch.service.ContactFormEmailJobService;
 import com.eventmanager.batch.service.ManualPaymentSummaryJobService;
 import com.eventmanager.batch.service.ManualPaymentConfirmationEmailJobService;
@@ -53,6 +59,8 @@ public class BatchJobController {
     private final ManualPaymentConfirmationEmailJobService manualPaymentConfirmationEmailJobService;
     private final ManualPaymentTicketEmailJobService manualPaymentTicketEmailJobService;
     private final StripeTicketBatchRefundService stripeTicketBatchRefundService;
+    private final DonationEmailJobService donationEmailJobService;
+    private final DonationQrCodeJobService donationQrCodeJobService;
     private final EventTicketTransactionRepository transactionRepository;
 
     /**
@@ -486,6 +494,81 @@ public class BatchJobController {
                     .jobId(request != null ? request.getJobId() : null)
                     .status("FAILED")
                     .message("Failed to trigger job: " + e.getMessage())
+                    .build());
+        }
+    }
+
+    /**
+     * Trigger donation email job.
+     * Sends donation confirmation emails for donations that need them.
+     * Triggered by API endpoint called from frontend after donation success.
+     */
+    @PostMapping("/donation-email")
+    public ResponseEntity<DonationEmailJobResponse> triggerDonationEmail(
+        @Valid @RequestBody DonationEmailJobRequest request
+    ) {
+        try {
+            log.info(
+                "Received request to trigger donation email job - donationId: {}, eventId: {}, tenantId: {}, recipientEmail: {}",
+                request.getDonationId(),
+                request.getEventId(),
+                request.getTenantId(),
+                request.getRecipientEmail()
+            );
+
+            DonationEmailJobResponse response = donationEmailJobService.triggerDonationEmailJob(request);
+
+            if (Boolean.TRUE.equals(response.getSuccess())) {
+                return ResponseEntity.accepted().body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+        } catch (Exception e) {
+            log.error("Failed to trigger donation email job: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(DonationEmailJobResponse.builder()
+                    .success(false)
+                    .message("Failed to trigger job: " + e.getMessage())
+                    .processedCount(0L)
+                    .successCount(0L)
+                    .failedCount(0L)
+                    .build());
+        }
+    }
+
+    /**
+     * Trigger donation QR code job.
+     * Generates QR codes for donations that need them.
+     * Triggered by API endpoint called from frontend after donation success.
+     */
+    @PostMapping("/donation-qrcode")
+    public ResponseEntity<DonationQrCodeJobResponse> triggerDonationQrCode(
+        @Valid @RequestBody DonationQrCodeJobRequest request
+    ) {
+        try {
+            log.info(
+                "Received request to trigger donation QR code job - donationId: {}, eventId: {}, tenantId: {}",
+                request.getDonationId(),
+                request.getEventId(),
+                request.getTenantId()
+            );
+
+            DonationQrCodeJobResponse response = donationQrCodeJobService.triggerDonationQrCodeJob(request);
+
+            if (Boolean.TRUE.equals(response.getSuccess())) {
+                return ResponseEntity.accepted().body(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+        } catch (Exception e) {
+            log.error("Failed to trigger donation QR code job: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(DonationQrCodeJobResponse.builder()
+                    .success(false)
+                    .message("Failed to trigger job: " + e.getMessage())
+                    .processedCount(0L)
+                    .successCount(0L)
+                    .failedCount(0L)
                     .build());
         }
     }

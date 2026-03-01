@@ -84,7 +84,7 @@ public class EligibleTicketReader implements ItemReader<EventTicketTransaction> 
     private List<EventTicketTransaction> loadNextPage() {
         try {
             Pageable pageable = PageRequest.of(currentPage, PAGE_SIZE);
-            
+
             // Convert ZonedDateTime to Timestamp for native query
             Timestamp startTimestamp = startDate != null ? Timestamp.from(startDate.toInstant()) : null;
             Timestamp endTimestamp = endDate != null ? Timestamp.from(endDate.toInstant()) : null;

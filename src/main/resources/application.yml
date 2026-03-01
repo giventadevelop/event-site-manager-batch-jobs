@@ -116,9 +116,24 @@ subscription:
     batch-size: ${STRIPE_FEES_TAX_BATCH_SIZE:100}
     rate-limit-delay-ms: ${STRIPE_FEES_TAX_RATE_LIMIT_DELAY_MS:100}
 
+  stripe-refund:
+    batch-size: ${STRIPE_REFUND_BATCH_SIZE:100}
+
   manual-payment-summary:
     enabled: ${MANUAL_PAYMENT_SUMMARY_ENABLED:true}
     schedule-cron: ${MANUAL_PAYMENT_SUMMARY_CRON:0 0 2 * * *}  # Daily at 2 AM
+
+  donation:
+    email:
+      batch-size: ${DONATION_EMAIL_BATCH_SIZE:10}
+    qrcode:
+      batch-size: ${DONATION_QRCODE_BATCH_SIZE:10}
+
+# QR Code Configuration
+qr:
+  code:
+    base-url: ${QR_CODE_BASE_URL:}
+    email-host-url-prefix: ${QR_CODE_EMAIL_HOST_URL_PREFIX:${NEXT_PUBLIC_APP_URL:http://localhost:3000}}
 
 # Logging
 logging:

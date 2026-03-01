@@ -51,7 +51,7 @@ public class StripeRefundService {
         if (apiKey == null || apiKey.isEmpty()) {
             throw new IllegalArgumentException("Stripe API key not found for tenant: " + tenantId);
         }
-        
+
         Stripe.apiKey = apiKey;
 
         RefundCreateParams params = RefundCreateParams.builder()
