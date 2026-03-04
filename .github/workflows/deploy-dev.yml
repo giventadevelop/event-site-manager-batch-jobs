@@ -18,7 +18,8 @@ env:
   ECS_SERVICE: event-site-manager-dev-batch-jobs-service
   ECS_CLUSTER: event-site-manager-dev-cluster
   ECS_TASK_DEFINITION: event-site-manager-dev-batch-jobs
-  CONTAINER_NAME: batch-jobs-container
+  # Must match the container "name" in the ECS task definition in AWS (see task definition JSON in ECS console)
+  CONTAINER_NAME: batch-jobs-service
 
 jobs:
   deploy:
@@ -69,6 +70,8 @@ jobs:
           aws ecs describe-task-definition \
             --task-definition ${{ env.ECS_TASK_DEFINITION }} \
             --query taskDefinition > task-definition.json
+          echo "Container names in task definition:"
+          cat task-definition.json | jq -r '.containerDefinitions[].name'
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def
