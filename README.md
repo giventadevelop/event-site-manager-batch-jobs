@@ -141,6 +141,15 @@ Jobs can be scheduled using Spring's `@Scheduled` annotation or via AWS EventBri
 
 ## Deployment to AWS ECS Fargate
 
+### CI/CD and deployment automation
+
+For guidelines on **automating the CI/CD pipeline in GitHub** (instead of manual deployment from the command prompt), see:
+
+- **[Batch Jobs Deployment Automation Analysis & Solutions](documentation/DEPLOYMENT_AUTOMATION_ANALYSIS.html)**  
+  Covers: current manual process, GitHub Actions workflow (sample YAML), AWS CodePipeline/CodeBuild, hybrid approach, comparison, recommendations, implementation roadmap (phases 1–4), and cost/risk notes. Use this when moving from manual PowerShell scripts to automated Fargate deployment.
+
+There is **no `infrastructure_deployment` folder** in this repository. The automation doc references `BATCH_JOBS_DEPLOYMENT_GUIDE.html` for the current manual deployment guide (that file may live in another repo or path). No GitHub Actions workflow files exist in this repo yet; the automation doc includes a sample workflow (e.g. `.github/workflows/deploy-dev.yml`) you can add.
+
 ### 1. Build and Push Docker Image
 
 ```bash

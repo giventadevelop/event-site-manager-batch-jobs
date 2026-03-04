@@ -74,3 +74,26 @@ Write-Host "aws ecs register-task-definition --cli-input-json file://ecs-task-de
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
