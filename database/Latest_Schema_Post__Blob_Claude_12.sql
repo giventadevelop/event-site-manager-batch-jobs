@@ -1580,6 +1580,7 @@ CREATE TABLE public.event_media (
                                     uploaded_by_id int8 NULL,
                                     sponsor_id bigint NULL,
                                     event_sponsors_join_id bigint NULL,
+                                    event_focus_group_id bigint NULL,
                                     performer_id bigint NULL,
                                     director_id bigint NULL,
                                     priority_ranking INT4 NOT NULL DEFAULT 0,
@@ -1592,7 +1593,8 @@ CREATE TABLE public.event_media (
                                     CONSTRAINT fk_event_media__event_id FOREIGN KEY (event_id) REFERENCES public.event_details(id) ON DELETE CASCADE,
                                     CONSTRAINT fk_event_media__uploaded_by_id FOREIGN KEY (uploaded_by_id) REFERENCES public.user_profile(id) ON DELETE SET NULL,
                                     CONSTRAINT fk_event_media_sponsor_id FOREIGN KEY (sponsor_id) REFERENCES public.event_sponsors(id) ON DELETE CASCADE,
-                                    CONSTRAINT fk_event_media_event_sponsors_join_id FOREIGN KEY (event_sponsors_join_id) REFERENCES public.event_sponsors_join(id) ON DELETE CASCADE
+                                    CONSTRAINT fk_event_media_event_sponsors_join_id FOREIGN KEY (event_sponsors_join_id) REFERENCES public.event_sponsors_join(id) ON DELETE CASCADE,
+                                    CONSTRAINT fk_event_media_event_focus_group_id FOREIGN KEY (event_focus_group_id) REFERENCES public.event_focus_groups(id) ON DELETE SET NULL
 );
 
 
@@ -1609,6 +1611,8 @@ COMMENT ON COLUMN public.event_media.sponsor_id IS 'Reference to sponsor for spo
 COMMENT ON COLUMN public.event_media.event_sponsors_join_id IS 'Reference to event-sponsor join record for custom posters. When set, this media file is a custom poster for a specific event-sponsor combination.';
 
 COMMENT ON COLUMN public.event_media.priority_ranking IS 'Priority ranking for media files (sponsor or event-sponsor). Lower values indicate higher priority (0 = highest priority). Used to determine which image to display when multiple files are available.';
+
+COMMENT ON COLUMN public.event_media.event_focus_group_id IS 'Reference to focus group when media is scoped to a focus group.';
 
 
 --
@@ -3164,6 +3168,7 @@ CREATE INDEX IF NOT EXISTS idx_event_media_event_sponsors_join_id ON public.even
 CREATE INDEX IF NOT EXISTS idx_event_media_priority_ranking ON public.event_media(priority_ranking) WHERE sponsor_id IS NOT NULL OR event_sponsors_join_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_event_media_sponsor_priority ON public.event_media(sponsor_id, priority_ranking) WHERE sponsor_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_event_media_event_sponsor_join_priority ON public.event_media(event_sponsors_join_id, priority_ranking) WHERE event_sponsors_join_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_event_media_event_focus_group_id ON public.event_media(event_focus_group_id) WHERE event_focus_group_id IS NOT NULL;
 
 -- Index for event_sponsors_join custom_poster_url
 CREATE INDEX IF NOT EXISTS idx_event_sponsors_join_custom_poster ON public.event_sponsors_join(custom_poster_url) WHERE custom_poster_url IS NOT NULL;
