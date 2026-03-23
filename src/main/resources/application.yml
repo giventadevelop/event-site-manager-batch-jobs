@@ -40,6 +40,12 @@ spring:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=3600s
 
+jhipster:
+  security:
+    authentication:
+      jwt:
+        base64-secret: ${JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET:}
+
 server:
   port: ${SERVER_PORT:8081}  # Default to 8081 to avoid conflict with backend on 8080
   servlet:

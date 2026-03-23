@@ -130,6 +130,34 @@ GET /batch-jobs/api/batch-jobs/health
 GET /batch-jobs/actuator/health
 ```
 
+### Batch Job Monitoring APIs (Admin)
+
+The service now exposes monitoring/read endpoints for job history and status:
+
+```bash
+GET /batch-jobs/api/batch-jobs/executions
+GET /batch-jobs/api/batch-jobs/executions/{id}
+GET /batch-jobs/api/batch-jobs/executions/failed?limit=50
+GET /batch-jobs/api/batch-jobs/executions/running?limit=50
+GET /batch-jobs/api/batch-jobs/summary
+GET /batch-jobs/api/batch-jobs/configured-jobs
+```
+
+Supported filters for `/executions`: `status`, `jobName`, `tenantId`, `startedAfter`, `startedBefore`, `page`, `size`, `sort`.
+
+### Security
+
+- All `/api/**` endpoints require Bearer JWT.
+- Public health endpoints:
+  - `/batch-jobs/api/batch-jobs/health`
+  - `/batch-jobs/actuator/health`
+  - `/batch-jobs/actuator/info`
+- Configure JWT verification secret:
+
+```bash
+JHIPSTER_SECURITY_AUTHENTICATION_JWT_BASE64_SECRET=...
+```
+
 ## Scheduled Jobs
 
 Jobs can be scheduled using Spring's `@Scheduled` annotation or via AWS EventBridge/ECS Scheduled Tasks.
