@@ -11,13 +11,19 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+# Runtime stage (use Debian base for broad platform support; Alpine lacks manifest on some platforms)
+FROM eclipse-temurin:17-jre
+
+# Install curl for health checks
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Create non-root user and temp directory with proper permissions
-RUN addgroup -S spring && adduser -S spring -G spring && \
+RUN groupadd -r spring && useradd -r -g spring spring && \
     mkdir -p /tmp/spring-boot-tomcat && \
     chown -R spring:spring /tmp/spring-boot-tomcat && \
     chown -R spring:spring /app
@@ -27,7 +33,7 @@ ENV JAVA_TMPDIR=/tmp/spring-boot-tomcat
 ENV TMPDIR=/tmp/spring-boot-tomcat
 
 # Switch to non-root user
-USER spring:spring
+USER spring
 
 # Copy built JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
@@ -37,7 +43,7 @@ EXPOSE 8081
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/batch-jobs/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/batch-jobs/actuator/health || exit 1
 
 # Run the application with temp directory set via JVM argument
 # This ensures machine-agnostic temp directory handling
